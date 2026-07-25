@@ -1,0 +1,59 @@
+.login-screen{
+        height:100vh;
+            background:#090d16;
+
+                display:flex;
+                    flex-direction:column;
+
+                        justify-content:center;
+                            align-items:center;
+
+                                gap:18px;
+                                }
+
+                                .login-screen h1{
+
+                                    color:white;
+                                        margin-bottom:20px;
+
+                                        }
+
+                                        .login-screen input{
+
+                                            width:280px;
+
+                                                padding:15px;
+
+                                                    border:none;
+
+                                                        border-radius:12px;
+
+                                                            font-size:16px;
+
+                                                            }
+
+                                                            .login-screen button{
+
+                                                                width:310px;
+
+                                                                    padding:15px;
+
+                                                                        border:none;
+
+                                                                            border-radius:12px;
+
+                                                                                font-size:16px;
+
+                                                                                    background:#7b5cff;
+
+                                                                                        color:white;
+
+                                                                                            cursor:pointer;
+
+                                                                                            }
+
+                                                                                            .secondary{
+
+                                                                                                background:#232839;
+
+                                                                                                }
