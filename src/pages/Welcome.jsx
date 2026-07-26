@@ -1,31 +1,23 @@
-import { useState } from "react";
 import AnimatedLogo from "../components/AnimatedLogo";
 import "../styles/welcome.css";
-import Login from "./Login";
 
-function Welcome() {
-  const [showLogin, setShowLogin] = useState(false);
+function Welcome({ onContinue }) {
+  return (
+      <div
+            className="welcome-screen"
+                  onClick={onContinue}
+                      >
+                            <AnimatedLogo />
 
-    if (showLogin) {
-        return <Login />;
-          }
+                                  <h1>21st Social</h1>
 
-            return (
-                <div
-                      className="welcome-screen"
-                            onClick={() => setShowLogin(true)}
-                                >
-                                      <AnimatedLogo />
+                                        <p>Create • Connect • Collaborate</p>
 
-                                            <h1>21st Social</h1>
+                                              <span className="tap-text">
+                                                      Tap anywhere to begin
+                                                            </span>
+                                                                </div>
+                                                                  );
+                                                                  }
 
-                                                  <p>Create • Connect • Collaborate</p>
-
-                                                        <span className="tap-text">
-                                                                Tap anywhere to begin
-                                                                      </span>
-                                                                          </div>
-                                                                            );
-                                                                            }
-
-                                                                            export default Welcome;
+                                                                  export default Welcome;

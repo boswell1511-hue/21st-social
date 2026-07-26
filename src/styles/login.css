@@ -57,3 +57,56 @@
                                                                                                 background:#232839;
 
                                                                                                 }
+.profile-photo-placeholder {
+      width: 140px;
+        height: 140px;
+          border-radius: 50%;
+            margin: 20px auto;
+              display: flex;
+                justify-content: center;
+                  align-items: center;
+                    font-size: 4rem;
+
+                      background: linear-gradient(
+                          135deg,
+                              #8b5cff,
+                                  #4dd6ff
+                                    );
+
+                                      color: white;
+
+                                        box-shadow:
+                                            0 0 20px rgba(139,92,255,.45),
+                                                0 0 40px rgba(77,214,255,.25);
+                                                }
+.btn {
+      width: 100%;
+        padding: 14px;
+          margin-top: 12px;
+            border: none;
+              border-radius: 14px;
+                font-size: 16px;
+                  font-weight: 600;
+                    cursor: pointer;
+                      transition: all 0.2s ease;
+                      }
+
+                      .btn-primary {
+                        background: linear-gradient(135deg, #7c4dff, #4fc3f7);
+                          color: #fff;
+                          }
+
+                          .btn-primary:hover {
+                            transform: translateY(-2px);
+                            }
+
+                            .btn-secondary {
+                              background: transparent;
+                                border: 2px solid #7c4dff;
+                                  color: #ffffff;
+                                  }
+
+                                  .btn:disabled {
+                                    opacity: 0.6;
+                                      cursor: not-allowed;
+                                      }

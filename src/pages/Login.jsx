@@ -1,29 +1,70 @@
+import { useState } from "react";
+import supabase from "../lib/supabase";
 import "../styles/login.css";
+import Register from "./Register";
 
 function Login() {
-  return (
-      <div className="login-screen">
+  const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+      const [loading, setLoading] = useState(false);
+        const [showRegister, setShowRegister] = useState(false);
 
-            <h1>Welcome Back</h1>
+          async function signIn() {
+              setLoading(true);
 
-                  <input
-                          type="email"
-                                  placeholder="Email"
-                                        />
+                  const { error } = await supabase.auth.signInWithPassword({
+                        email,
+                              password,
+                                  });
 
-                                              <input
-                                                      type="password"
-                                                              placeholder="Password"
-                                                                    />
+                                      setLoading(false);
 
-                                                                          <button>Sign In</button>
+                                          if (error) {
+                                                alert(error.message);
+                                                    } else {
+                                                          alert("Signed in successfully!");
+                                                              }
+                                                                }
 
-                                                                                <button className="secondary">
-                                                                                        Create Account
-                                                                                              </button>
+                                                                  if (showRegister) {
+                                                                      return (
+                                                                            <Register
+                                                                                    onBack={() => setShowRegister(false)}
+                                                                                          />
+                                                                                              );
+                                                                                                }
 
-                                                                                                  </div>
-                                                                                                    );
-                                                                                                    }
+                                                                                                  return (
+                                                                                                      <div className="login-screen">
+                                                                                                            <h1>Welcome Back</h1>
 
-                                                                                                    export default Login;
+                                                                                                                  <input
+                                                                                                                          type="email"
+                                                                                                                                  placeholder="Email"
+                                                                                                                                          value={email}
+                                                                                                                                                  onChange={(e) => setEmail(e.target.value)}
+                                                                                                                                                        />
+
+                                                                                                                                                              <input
+                                                                                                                                                                      type="password"
+                                                                                                                                                                              placeholder="Password"
+                                                                                                                                                                                      value={password}
+                                                                                                                                                                                              onChange={(e) => setPassword(e.target.value)}
+                                                                                                                                                                                                    />
+
+                                                                                                                                                                                                          <button onClick={signIn} disabled={loading}>
+                                                                                                                                                                                                                  {loading ? "Please wait..." : "Sign In"}
+                                                                                                                                                                                                                        </button>
+
+                                                                                                                                                                                                                              <button
+                                                                                                                                                                                                                                      className="secondary"
+                                                                                                                                                                                                                                              onClick={() => setShowRegister(true)}
+                                                                                                                                                                                                                                                      disabled={loading}
+                                                                                                                                                                                                                                                            >
+                                                                                                                                                                                                                                                                    Create Account
+                                                                                                                                                                                                                                                                          </button>
+                                                                                                                                                                                                                                                                              </div>
+                                                                                                                                                                                                                                                                                );
+                                                                                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                                                                                export default Login;
