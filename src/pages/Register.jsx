@@ -2,7 +2,7 @@ import { useState } from "react";
 import supabase from "../lib/supabase";
 import "../styles/login.css";
 
-function Register({ onBack }) {
+function Register({ onBack, onSuccess }) {
   const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
       const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ function Register({ onBack }) {
                                         if (error) {
                                               alert(error.message);
                                                   } else {
-                                                        alert("Account created! Check your email to confirm your account.");
+                                                        onSuccess();
                                                             }
                                                               }
 
@@ -46,11 +46,15 @@ function Register({ onBack }) {
                                                                                                                                                                                 {loading ? "Please wait..." : "Create Account"}
                                                                                                                                                                                       </button>
 
-                                                                                                                                                                                            <button className="secondary" onClick={onBack}>
-                                                                                                                                                                                                    Back to Login
-                                                                                                                                                                                                          </button>
-                                                                                                                                                                                                              </div>
-                                                                                                                                                                                                                );
-                                                                                                                                                                                                                }
+                                                                                                                                                                                            <button
+                                                                                                                                                                                                    className="secondary"
+                                                                                                                                                                                                            onClick={onBack}
+                                                                                                                                                                                                                    disabled={loading}
+                                                                                                                                                                                                                          >
+                                                                                                                                                                                                                                  Back to Login
+                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                              );
+                                                                                                                                                                                                                                              }
 
-                                                                                                                                                                                                                export default Register;
+                                                                                                                                                                                                                                              export default Register;

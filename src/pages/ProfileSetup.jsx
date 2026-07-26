@@ -1,53 +1,70 @@
 import { useState } from "react";
 import "../styles/login.css";
 
-function ProfileSetup() {
+function ProfileSetup({ onContinue }) {
   const [displayName, setDisplayName] = useState("");
     const [username, setUsername] = useState("");
       const [bio, setBio] = useState("");
 
         function handleContinue() {
-            alert("Next: Save profile and open Home.");
-              }
+            if (!displayName.trim()) {
+                  alert("Please enter a display name.");
+                        return;
+                            }
 
-                return (
-                    <div className="login-screen">
-                          <h1>Create Your Profile</h1>
+                                if (!username.trim()) {
+                                      alert("Please choose a username.");
+                                            return;
+                                                }
 
-                                <div className="profile-photo-placeholder">
-                                        👤
-                                              </div>
+                                                    onContinue();
+                                                      }
 
-                                                    <button className="secondary">
-                                                            Upload Profile Photo
-                                                                  </button>
+                                                        return (
+                                                            <div className="login-screen">
+                                                                  <h1>Create Your Profile</h1>
 
-                                                                        <input
-                                                                                type="text"
-                                                                                        placeholder="Display Name"
-                                                                                                value={displayName}
-                                                                                                        onChange={(e) => setDisplayName(e.target.value)}
-                                                                                                              />
+                                                                        <div
+                                                                                className="profile-photo-placeholder"
+                                                                                        onClick={() => alert("Profile photo upload coming soon!")}
+                                                                                              >
+                                                                                                      👤
+                                                                                                            </div>
 
-                                                                                                                    <input
-                                                                                                                            type="text"
-                                                                                                                                    placeholder="Username"
-                                                                                                                                            value={username}
-                                                                                                                                                    onChange={(e) => setUsername(e.target.value)}
-                                                                                                                                                          />
+                                                                                                                  <button
+                                                                                                                          className="secondary"
+                                                                                                                                  onClick={() => alert("Profile photo upload coming soon!")}
+                                                                                                                                        >
+                                                                                                                                                Upload Profile Photo
+                                                                                                                                                      </button>
 
-                                                                                                                                                                <textarea
-                                                                                                                                                                        placeholder="Tell everyone about yourself..."
-                                                                                                                                                                                rows={4}
-                                                                                                                                                                                        value={bio}
-                                                                                                                                                                                                onChange={(e) => setBio(e.target.value)}
-                                                                                                                                                                                                      />
+                                                                                                                                                            <input
+                                                                                                                                                                    type="text"
+                                                                                                                                                                            placeholder="Display Name"
+                                                                                                                                                                                    value={displayName}
+                                                                                                                                                                                            onChange={(e) => setDisplayName(e.target.value)}
+                                                                                                                                                                                                  />
 
-                                                                                                                                                                                                            <button onClick={handleContinue}>
-                                                                                                                                                                                                                    Continue
-                                                                                                                                                                                                                          </button>
-                                                                                                                                                                                                                              </div>
-                                                                                                                                                                                                                                );
-                                                                                                                                                                                                                                }
+                                                                                                                                                                                                        <input
+                                                                                                                                                                                                                type="text"
+                                                                                                                                                                                                                        placeholder="Username"
+                                                                                                                                                                                                                                value={username}
+                                                                                                                                                                                                                                        onChange={(e) => setUsername(e.target.value)}
+                                                                                                                                                                                                                                              />
 
-                                                                                                                                                                                                                                export default ProfileSetup;
+                                                                                                                                                                                                                                                    <textarea
+                                                                                                                                                                                                                                                            className="bio-field"
+                                                                                                                                                                                                                                                                    placeholder="Tell the community a little about yourself, your interests, or what you're passionate about..."
+                                                                                                                                                                                                                                                                            rows={5}
+                                                                                                                                                                                                                                                                                    value={bio}
+                                                                                                                                                                                                                                                                                            onChange={(e) => setBio(e.target.value)}
+                                                                                                                                                                                                                                                                                                  />
+
+                                                                                                                                                                                                                                                                                                        <button onClick={handleContinue}>
+                                                                                                                                                                                                                                                                                                                Continue
+                                                                                                                                                                                                                                                                                                                      </button>
+                                                                                                                                                                                                                                                                                                                          </div>
+                                                                                                                                                                                                                                                                                                                            );
+                                                                                                                                                                                                                                                                                                                            }
+
+                                                                                                                                                                                                                                                                                                                            export default ProfileSetup;
