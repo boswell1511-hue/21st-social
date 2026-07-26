@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "../styles/login.css";
+import ProfilePhotoPicker from "../components/profile/ProfilePhotoPicker";
 
 function ProfileSetup({ onContinue }) {
   const [displayName, setDisplayName] = useState("");
@@ -24,19 +25,7 @@ function ProfileSetup({ onContinue }) {
                                                             <div className="login-screen">
                                                                   <h1>Create Your Profile</h1>
 
-                                                                        <div
-                                                                                className="profile-photo-placeholder"
-                                                                                        onClick={() => alert("Profile photo upload coming soon!")}
-                                                                                              >
-                                                                                                      👤
-                                                                                                            </div>
-
-                                                                                                                  <button
-                                                                                                                          className="secondary"
-                                                                                                                                  onClick={() => alert("Profile photo upload coming soon!")}
-                                                                                                                                        >
-                                                                                                                                                Upload Profile Photo
-                                                                                                                                                      </button>
+                                                                        <ProfilePhotoPicker />
 
                                                                                                                                                             <input
                                                                                                                                                                     type="text"

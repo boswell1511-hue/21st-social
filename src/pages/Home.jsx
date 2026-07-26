@@ -3,39 +3,51 @@ import "../styles/login.css";
 function Home() {
   return (
       <div className="login-screen">
-            <h1>Welcome to 21st Social</h1>
 
-                  <p>Create • Connect • Collaborate</p>
+            <h3 className="welcome-title">
+                    Welcome to
+                          </h3>
 
-                        <h2>👋 Welcome!</h2>
+                                <h1 className="logo-title">
+                                        21<span className="logo-sup">st</span> Social
+                                              </h1>
 
-                              <div className="secondary">
-                                      ✨ Finish your profile
-                                            </div>
+                                                    <p className="tagline">
+                                                            Create • Connect • Collaborate
+                                                                  </p>
 
-                                                  <br />
+                                                                        <div className="progress-card">
+                                                                                <h3>Complete Your Journey</h3>
 
-                                                        <div className="secondary">
-                                                                👥 Find friends
-                                                                      </div>
+                                                                                        <div className="progress-bar">
+                                                                                                  <div className="progress-fill"></div>
+                                                                                                          </div>
 
-                                                                            <br />
+                                                                                                                  <p>25% Complete</p>
+                                                                                                                        </div>
 
-                                                                                  <div className="secondary">
-                                                                                          🌎 Discover communities
-                                                                                                </div>
+                                                                                                                              <button className="secondary home-card">
+                                                                                                                                      ✨ Finish Your Profile
+                                                                                                                                            </button>
 
-                                                                                                      <br />
+                                                                                                                                                  <button className="secondary home-card">
+                                                                                                                                                          👥 Find Friends
+                                                                                                                                                                </button>
 
-                                                                                                            <div className="secondary">
-                                                                                                                    🎥 Create your first post
-                                                                                                                          </div>
+                                                                                                                                                                      <button className="secondary home-card">
+                                                                                                                                                                              🌎 Discover Communities
+                                                                                                                                                                                    </button>
 
-                                                                                                                                <br />
+                                                                                                                                                                                          <button className="secondary home-card">
+                                                                                                                                                                                                  🎥 Create Your First Post
+                                                                                                                                                                                                        </button>
 
-                                                                                                                                      <p>Your feed is coming soon...</p>
-                                                                                                                                          </div>
-                                                                                                                                            );
-                                                                                                                                            }
+                                                                                                                                                                                                              <p className="coming-soon">
+                                                                                                                                                                                                                      Your community is waiting...
+                                                                                                                                                                                                                            </p>
 
-                                                                                                                                            export default Home;
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                  );
+                                                                                                                                                                                                                                  }
+
+                                                                                                                                                                                                                                  export default Home;

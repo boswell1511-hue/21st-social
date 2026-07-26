@@ -3,7 +3,11 @@ import "../styles/login.css";
 function CommunityEntrance({ onEnter }) {
   return (
       <div className="login-screen">
-            <h1>🎉 Welcome to the Community!</h1>
+            <h1 className="community-title">
+                    🎉 Welcome to
+                      <br />
+                        the Community!
+                        </h1>
 
                   <p>
                           Your profile is ready.
