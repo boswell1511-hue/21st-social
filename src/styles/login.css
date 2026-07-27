@@ -12,10 +12,15 @@
                     }
 
                     .login-screen h1 {
-                      color: white;
-                        margin-bottom: 10px;
+                        color: white;
                           text-align: center;
-                          }
+                            line-height: 1.35;
+                              margin: 0 0 20px 0;
+                                font-size: 42px;
+                                  font-weight: 700;
+                                    letter-spacing: 0.5px;
+                                    }
+                    
 
                           .login-screen p {
                             color: #cfcfcf;
@@ -26,17 +31,26 @@
                                 .login-screen input,
                                 .login-screen textarea {
                                   width: 310px;
-                                    padding: 15px;
+                                  padding: 15px;
 
-                                      border: none;
-                                        border-radius: 12px;
+                                  border: 2px solid transparent;
+                                  border-radius: 14px;
 
-                                          font-size: 16px;
+                                  background: #ffffff;
+                                  color: #111;
 
-                                            background: #ffffff;
-                                              color: #111;
+                                  font-size: 16px;
+
+                                  transition: .25s ease;
                                               }
+.login-screen input:focus,
+.login-screen textarea:focus {
+    outline: none;
 
+        border-color: #8b5cff;
+
+            box-shadow: 0 0 12px rgba(139, 92, 255, 0.35);
+            }
                                               .login-screen textarea {
                                                 min-height: 120px;
                                                   resize: none;
@@ -56,9 +70,22 @@
                                                                 }
 
                                                                 .login-screen button:not(.secondary) {
-                                                                  background: #7b5cff;
-                                                                    color: white;
-                                                                    }
+                                                                    background: linear-gradient(
+                                                                          135deg,
+                                                                                #8b5cff,
+                                                                                      #4dd6ff
+                                                                                        );
+
+                                                                                          color: white;
+
+                                                                                            transition: .25s ease;
+                                                                                            }
+                                                                .login-screen button:hover {
+                                                                    transform: translateY(-2px);
+
+                                                                      box-shadow: 0 8px 20px rgba(139, 92, 255, 0.35);
+                                                                      }
+                                                                
 
                                                                     .secondary {
                                                                       background: #232839;

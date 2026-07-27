@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import "../../styles/login.css";
 
-function ProfilePhotoPicker() {
+function ProfilePhotoPicker({ onImageSelected }) {
   const [image, setImage] = useState(null);
     const fileInputRef = useRef(null);
 
@@ -12,45 +12,50 @@ function ProfilePhotoPicker() {
 
                   const imageUrl = URL.createObjectURL(file);
                       setImage(imageUrl);
-                        }
 
-                          function openFilePicker() {
-                              fileInputRef.current.click();
-                                }
+                          if (onImageSelected) {
+                                onImageSelected(file);
+                                    }
+                                      }
 
-                                  return (
-                                      <div className="profile-photo-picker">
-                                            <div
-                                                    className="profile-photo-placeholder"
-                                                            onClick={openFilePicker}
-                                                                  >
-                                                                          {image ? (
-                                                                                    <img
-                                                                                                src={image}
-                                                                                                            alt="Profile"
-                                                                                                                        className="profile-photo"
-                                                                                                                                  />
-                                                                                                                                          ) : (
-                                                                                                                                                    <span className="profile-photo-icon">👤</span>
-                                                                                                                                                            )}
-                                                                                                                                                                  </div>
+                                        function openFilePicker() {
+                                            fileInputRef.current.click();
+                                              }
 
-                                                                                                                                                                        <input
-                                                                                                                                                                                ref={fileInputRef}
-                                                                                                                                                                                        type="file"
-                                                                                                                                                                                                accept="image/*"
-                                                                                                                                                                                                        onChange={handleImageChange}
-                                                                                                                                                                                                                style={{ display: "none" }}
-                                                                                                                                                                                                                      />
+                                                return (
+                                                    <div className="profile-photo-picker">
+                                                          <div
+                                                                  className="profile-photo-placeholder"
+                                                                          onClick={openFilePicker}
+                                                                                >
+                                                                                        {image ? (
+                                                                                                  <img
+                                                                                                              src={image}
+                                                                                                                          alt="Profile"
+                                                                                                                                      className="profile-photo"
+                                                                                                                                                />
+                                                                                                                                                        ) : (
+                                                                                                                                                                  <span className="profile-photo-icon">👤</span>
+                                                                                                                                                                          )}
+                                                                                                                                                                                </div>
 
-                                                                                                                                                                                                                            <button
-                                                                                                                                                                                                                                    className="secondary"
-                                                                                                                                                                                                                                            onClick={openFilePicker}
-                                                                                                                                                                                                                                                  >
-                                                                                                                                                                                                                                                          Upload Profile Photo
-                                                                                                                                                                                                                                                                </button>
-                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                      );
-                                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                      <input
+                                                                                                                                                                                              ref={fileInputRef}
+                                                                                                                                                                                                      type="file"
+                                                                                                                                                                                                              accept="image/*"
+                                                                                                                                                                                                                      onChange={handleImageChange}
+                                                                                                                                                                                                                              style={{ display: "none" }}
+                                                                                                                                                                                                                                    />
 
-                                                                                                                                                                                                                                                                      export default ProfilePhotoPicker;
+                                                                                                                                                                                                                                          <button
+                                                                                                                                                                                                                                                  type="button"
+                                                                                                                                                                                                                                                          className="secondary"
+                                                                                                                                                                                                                                                                  onClick={openFilePicker}
+                                                                                                                                                                                                                                                                        >
+                                                                                                                                                                                                                                                                                Upload Profile Photo
+                                                                                                                                                                                                                                                                                      </button>
+                                                                                                                                                                                                                                                                                          </div>
+                                                                                                                                                                                                                                                                                            );
+                                                                                                                                                                                                                                                                                            }
+
+                                                                                                                                                                                                                                                                                            export default ProfilePhotoPicker;
