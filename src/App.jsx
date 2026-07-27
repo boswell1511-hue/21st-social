@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import ProfileSetup from "./pages/ProfileSetup";
 import CommunityEntrance from "./pages/CommunityEntrance";
 import Home from "./pages/Home";
+import MyProfile from "./pages/MyProfile";
 
 function App() {
   const [screen, setScreen] = useState("welcome");
@@ -41,15 +42,22 @@ function App() {
                                                                                                                                                                                                 );
 
                                                                                                                                                                                                     case "home":
-                                                                                                                                                                                                          return <Home />;
+                                                                                                                                                                                                          return (
+                                                                                                                                                                                                                  <Home
+                                                                                                                                                                                                                            onMyProfile={() => setScreen("myProfile")}
+                                                                                                                                                                                                                                    />
+                                                                                                                                                                                                                                          );
 
-                                                                                                                                                                                                              default:
-                                                                                                                                                                                                                    return (
-                                                                                                                                                                                                                            <Welcome
-                                                                                                                                                                                                                                      onContinue={() => setScreen("login")}
-                                                                                                                                                                                                                                              />
-                                                                                                                                                                                                                                                    );
-                                                                                                                                                                                                                                                      }
-                                                                                                                                                                                                                                                      }
+                                                                                                                                                                                                                                              case "myProfile":
+                                                                                                                                                                                                                                                    return <MyProfile />;
 
-                                                                                                                                                                                                                                                      export default App;
+                                                                                                                                                                                                                                                        default:
+                                                                                                                                                                                                                                                              return (
+                                                                                                                                                                                                                                                                      <Welcome
+                                                                                                                                                                                                                                                                                onContinue={() => setScreen("login")}
+                                                                                                                                                                                                                                                                                        />
+                                                                                                                                                                                                                                                                                              );
+                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                                                                                                export default App;

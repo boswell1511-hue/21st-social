@@ -1,6 +1,6 @@
 import "../styles/login.css";
 
-function Home() {
+function Home({ onMyProfile }) {
   return (
       <div className="login-screen">
 
@@ -26,9 +26,12 @@ function Home() {
                                                                                                                   <p>25% Complete</p>
                                                                                                                         </div>
 
-                                                                                                                              <button className="secondary home-card">
-                                                                                                                                      ✨ Finish Your Profile
-                                                                                                                                            </button>
+                                                                                                                              <button
+                                                                                                                                className="secondary home-card"
+                                                                                                                                  onClick={onMyProfile}
+                                                                                                                                  >
+                                                                                                                                    ✨ Finish Your Profile
+                                                                                                                                    </button>
 
                                                                                                                                                   <button className="secondary home-card">
                                                                                                                                                           👥 Find Friends
