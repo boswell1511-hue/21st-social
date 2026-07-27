@@ -1,5 +1,6 @@
 import { useState } from "react";
 import supabase from "../lib/supabase";
+import ProfileService from "../services/profile/ProfileService";
 import "../styles/login.css";
 
 function Login({ onRegister, onSuccess }) {
@@ -10,51 +11,62 @@ function Login({ onRegister, onSuccess }) {
         async function signIn() {
             setLoading(true);
 
-                const { error } = await supabase.auth.signInWithPassword({
-                      email,
-                            password,
-                                });
+                try {
+                      const { error } = await supabase.auth.signInWithPassword({
+                              email,
+                                      password,
+                                            });
 
-                                    setLoading(false);
+                                                  if (error) {
+                                                          alert(error.message);
+                                                                  return;
+                                                                        }
 
-                                        if (error) {
-                                              alert(error.message);
-                                                  } else {
-                                                        onSuccess();
-                                                            }
-                                                              }
+                                                                              const hasProfile = await ProfileService.profileExists();
 
-                                                                return (
-                                                                    <div className="login-screen">
-                                                                          <h1>Welcome Back</h1>
+                                                                                    if (hasProfile) {
+                                                                                            onSuccess("home");
+                                                                                                  } else {
+                                                                                                          onSuccess("profile");
+                                                                                                                }
+                                                                                                                    } catch (err) {
+                                                                                                                          alert(err.message);
+                                                                                                                              } finally {
+                                                                                                                                    setLoading(false);
+                                                                                                                                        }
+                                                                                                                                          }
 
-                                                                                <input
-                                                                                        type="email"
-                                                                                                placeholder="Email"
-                                                                                                        value={email}
-                                                                                                                onChange={(e) => setEmail(e.target.value)}
-                                                                                                                      />
+                                                                                                                                            return (
+                                                                                                                                                <div className="login-screen">
+                                                                                                                                                      <h1>Welcome Back</h1>
 
-                                                                                                                            <input
-                                                                                                                                    type="password"
-                                                                                                                                            placeholder="Password"
-                                                                                                                                                    value={password}
-                                                                                                                                                            onChange={(e) => setPassword(e.target.value)}
-                                                                                                                                                                  />
+                                                                                                                                                            <input
+                                                                                                                                                                    type="email"
+                                                                                                                                                                            placeholder="Email"
+                                                                                                                                                                                    value={email}
+                                                                                                                                                                                            onChange={(e) => setEmail(e.target.value)}
+                                                                                                                                                                                                  />
 
-                                                                                                                                                                        <button onClick={signIn} disabled={loading}>
-                                                                                                                                                                                {loading ? "Please wait..." : "Sign In"}
-                                                                                                                                                                                      </button>
+                                                                                                                                                                                                        <input
+                                                                                                                                                                                                                type="password"
+                                                                                                                                                                                                                        placeholder="Password"
+                                                                                                                                                                                                                                value={password}
+                                                                                                                                                                                                                                        onChange={(e) => setPassword(e.target.value)}
+                                                                                                                                                                                                                                              />
 
-                                                                                                                                                                                            <button
-                                                                                                                                                                                                    className="secondary"
-                                                                                                                                                                                                            onClick={onRegister}
-                                                                                                                                                                                                                    disabled={loading}
-                                                                                                                                                                                                                          >
-                                                                                                                                                                                                                                  Create Account
-                                                                                                                                                                                                                                        </button>
-                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                              );
-                                                                                                                                                                                                                                              }
+                                                                                                                                                                                                                                                    <button onClick={signIn} disabled={loading}>
+                                                                                                                                                                                                                                                            {loading ? "Please wait..." : "Sign In"}
+                                                                                                                                                                                                                                                                  </button>
 
-                                                                                                                                                                                                                                              export default Login;
+                                                                                                                                                                                                                                                                        <button
+                                                                                                                                                                                                                                                                                className="secondary"
+                                                                                                                                                                                                                                                                                        onClick={onRegister}
+                                                                                                                                                                                                                                                                                                disabled={loading}
+                                                                                                                                                                                                                                                                                                      >
+                                                                                                                                                                                                                                                                                                              Create Account
+                                                                                                                                                                                                                                                                                                                    </button>
+                                                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                                                          );
+                                                                                                                                                                                                                                                                                                                          }
+
+                                                                                                                                                                                                                                                                                                                          export default Login;
