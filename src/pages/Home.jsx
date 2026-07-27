@@ -2,104 +2,113 @@ import { useEffect, useState } from "react";
 import ProfileService from "../services/profile/ProfileService";
 import "../styles/login.css";
 
-function Home({ onMyProfile, onFindFriends }) {
-  const [profile, setProfile] = useState(null);
+function Home({
+  onMyProfile,
+    onFindFriends,
+      onCreatePost,
+      }) {
+        const [profile, setProfile] = useState(null);
 
-    useEffect(() => {
-        loadProfile();
-          }, []);
+          useEffect(() => {
+              loadProfile();
+                }, []);
 
-            async function loadProfile() {
-                try {
-                      const data = await ProfileService.getProfile();
-                            setProfile(data);
-                                } catch (error) {
-                                      console.error(error);
-                                          }
-                                            }
+                  async function loadProfile() {
+                      try {
+                            const data = await ProfileService.getProfile();
+                                  setProfile(data);
+                                      } catch (error) {
+                                            console.error(error);
+                                                }
+                                                  }
 
-                                              function getGreeting() {
-                                                  const hour = new Date().getHours();
+                                                    function getGreeting() {
+                                                        const hour = new Date().getHours();
 
-                                                      if (hour < 12) return "Good Morning";
-                                                          if (hour < 17) return "Good Afternoon";
-                                                              return "Good Evening";
-                                                                }
+                                                            if (hour < 12) return "Good Morning";
+                                                                if (hour < 17) return "Good Afternoon";
 
-                                                                  function getCompletion() {
-                                                                      if (!profile) return 0;
+                                                                    return "Good Evening";
+                                                                      }
 
-                                                                          let completed = 0;
+                                                                        function getCompletion() {
+                                                                            if (!profile) return 0;
 
-                                                                              if (profile.display_name) completed++;
-                                                                                  if (profile.username) completed++;
-                                                                                      if (profile.bio) completed++;
-                                                                                          if (profile.avatar_url) completed++;
+                                                                                let completed = 0;
 
-                                                                                              return Math.round((completed / 4) * 100);
-                                                                                                }
+                                                                                    if (profile.display_name) completed++;
+                                                                                        if (profile.username) completed++;
+                                                                                            if (profile.bio) completed++;
+                                                                                                if (profile.avatar_url) completed++;
 
-                                                                                                  const completion = getCompletion();
+                                                                                                    return Math.round((completed / 4) * 100);
+                                                                                                      }
 
-                                                                                                    return (
-                                                                                                        <div className="login-screen">
+                                                                                                        const completion = getCompletion();
 
-                                                                                                              <h3 className="welcome-title">
-                                                                                                                      {getGreeting()}
-                                                                                                                              {profile?.display_name ? `, ${profile.display_name}` : ""} 👋
-                                                                                                                                    </h3>
+                                                                                                          return (
+                                                                                                              <div className="login-screen">
 
-                                                                                                                                          <h1 className="logo-title">
-                                                                                                                                                  21<span className="logo-sup">st</span> Social
-                                                                                                                                                        </h1>
+                                                                                                                    <h3 className="welcome-title">
+                                                                                                                            {getGreeting()}
+                                                                                                                                    {profile?.display_name ? `, ${profile.display_name}` : ""} 👋
+                                                                                                                                          </h3>
 
-                                                                                                                                                              <p className="tagline">
-                                                                                                                                                                      Create • Connect • Collaborate
-                                                                                                                                                                            </p>
+                                                                                                                                                <h1 className="logo-title">
+                                                                                                                                                        21<span className="logo-sup">st</span> Social
+                                                                                                                                                              </h1>
 
-                                                                                                                                                                                  <div className="progress-card">
-                                                                                                                                                                                          <h3>Complete Your Journey</h3>
+                                                                                                                                                                    <p className="tagline">
+                                                                                                                                                                            Create • Connect • Collaborate
+                                                                                                                                                                                  </p>
 
-                                                                                                                                                                                                  <div className="progress-bar">
-                                                                                                                                                                                                            <div
-                                                                                                                                                                                                                        className="progress-fill"
-                                                                                                                                                                                                                                    style={{
-                                                                                                                                                                                                                                                  width: `${completion}%`,
-                                                                                                                                                                                                                                                              }}
-                                                                                                                                                                                                                                                                        />
-                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                        <div className="progress-card">
+                                                                                                                                                                                                <h3>Complete Your Journey</h3>
 
-                                                                                                                                                                                                                                                                                        <p>{completion}% Complete</p>
-                                                                                                                                                                                                                                                                                              </div>
+                                                                                                                                                                                                        <div className="progress-bar">
+                                                                                                                                                                                                                  <div
+                                                                                                                                                                                                                              className="progress-fill"
+                                                                                                                                                                                                                                          style={{
+                                                                                                                                                                                                                                                        width: `${completion}%`,
+                                                                                                                                                                                                                                                                    }}
+                                                                                                                                                                                                                                                                              />
+                                                                                                                                                                                                                                                                                      </div>
 
-                                                                                                                                                                                                                                                                                                    <button
-                                                                                                                                                                                                                                                                                                            className="secondary home-card"
-                                                                                                                                                                                                                                                                                                                    onClick={onMyProfile}
-                                                                                                                                                                                                                                                                                                                          >
-                                                                                                                                                                                                                                                                                                                                  👤 My Profile
-                                                                                                                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                                                                              <p>{completion}% Complete</p>
+                                                                                                                                                                                                                                                                                                    </div>
 
-                                                                                                                                                                                                                                                                                                                                              <button
-                                                                                                                                                                                                                                                                                                                                                      className="secondary home-card"
-                                                                                                                                                                                                                                                                                                                                                              onClick={onFindFriends}
-                                                                                                                                                                                                                                                                                                                                                                    >
-                                                                                                                                                                                                                                                                                                                                                                            👥 Find Friends
-                                                                                                                                                                                                                                                                                                                                                                                  </button>
+                                                                                                                                                                                                                                                                                                          <button
+                                                                                                                                                                                                                                                                                                                  className="secondary home-card"
+                                                                                                                                                                                                                                                                                                                          onClick={onMyProfile}
+                                                                                                                                                                                                                                                                                                                                >
+                                                                                                                                                                                                                                                                                                                                        👤 My Profile
+                                                                                                                                                                                                                                                                                                                                              </button>
 
-                                                                                                                                                                                                                                                                                                                                                                                        <button className="secondary home-card">
-                                                                                                                                                                                                                                                                                                                                                                                                🌎 Discover Communities
-                                                                                                                                                                                                                                                                                                                                                                                                      </button>
+                                                                                                                                                                                                                                                                                                                                                    <button
+                                                                                                                                                                                                                                                                                                                                                            className="secondary home-card"
+                                                                                                                                                                                                                                                                                                                                                                    onClick={onFindFriends}
+                                                                                                                                                                                                                                                                                                                                                                          >
+                                                                                                                                                                                                                                                                                                                                                                                  🌎 Get Connected
+                                                                                                                                                                                                                                                                                                                                                                                        </button>
 
-                                                                                                                                                                                                                                                                                                                                                                                                            <button className="secondary home-card">
-                                                                                                                                                                                                                                                                                                                                                                                                                    🎥 Create Your First Post
-                                                                                                                                                                                                                                                                                                                                                                                                                          </button>
+                                                                                                                                                                                                                                                                                                                                                                                              <button className="secondary home-card">
+                                                                                                                                                                                                                                                                                                                                                                                                      🌎 Discover Communities
+                                                                                                                                                                                                                                                                                                                                                                                                            </button>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                <p className="coming-soon">
-                                                                                                                                                                                                                                                                                                                                                                                                                                        Your community is waiting...
-                                                                                                                                                                                                                                                                                                                                                                                                                                              </p>
+                                                                                                                                                                                                                                                                                                                                                                                                                  <button
+                                                                                                                                                                                                                                                                                                                                                                                                                          className="secondary home-card"
+                                                                                                                                                                                                                                                                                                                                                                                                                                  onClick={onCreatePost}
+                                                                                                                                                                                                                                                                                                                                                                                                                                        >
+                                                                                                                                                                                                                                                                                                                                                                                                                                                ✨ Be Creative
+                                                                                                                                                                                                                                                                                                                                                                                                                                                      </button>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                  </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                    );
-                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            <p className="coming-soon">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                    Share a thought, a photo, a story,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            or something that inspires others.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  </p>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                    export default Home;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        );
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        export default Home;
