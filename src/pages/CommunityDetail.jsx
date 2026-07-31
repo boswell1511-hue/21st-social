@@ -1,10 +1,41 @@
+import { useEffect, useState } from "react";
+import supabase from "../lib/supabase";
+
 function CommunityDetail({
       community,
         onBack,
           onJoin,
+          joined,
           }) {
             if (!community) return null;
 
+            const [localJoined, setLocalJoined] = useState(false);
+            useEffect(() => {
+                  checkMembership();
+                  }, [community]);
+
+                  async function checkMembership() {
+                    const {
+                        data: { user },
+                          } = await supabase.auth.getUser();
+
+                            if (!user) return;
+
+                              const { data, error } = await supabase
+                                  .from("community_members")
+                                      .select("id")
+                                          .eq("community_id", community.id)
+                                              .eq("user_id", user.id)
+                                                  .maybeSingle();
+
+                                                    if (error) {
+                                                        console.error(error);
+                                                            return;
+                                                              }
+
+                                                                setJoined(!!data);
+                                                                }
+            
               return (
                   <div
                         style={{
@@ -50,20 +81,21 @@ function CommunityDetail({
                                                                                                                                                                                                                                                                                                                         </h3>
 
                                                                                                                                                                                                                                                                                                                                 <button
-                                                                                                                                                                                                                                                                                                                                          onClick={onJoin}
-                                                                                                                                                                                                                                                                                                                                                    style={{
-                                                                                                                                                                                                                                                                                                                                                                marginTop: "10px",
-                                                                                                                                                                                                                                                                                                                                                                            padding: "12px 26px",
-                                                                                                                                                                                                                                                                                                                                                                                        borderRadius: "999px",
-                                                                                                                                                                                                                                                                                                                                                                                                    border: "none",
-                                                                                                                                                                                                                                                                                                                                                                                                                background: "#7c3aed",
-                                                                                                                                                                                                                                                                                                                                                                                                                            color: "#fff",
-                                                                                                                                                                                                                                                                                                                                                                                                                                        fontWeight: "bold",
-                                                                                                                                                                                                                                                                                                                                                                                                                                                    cursor: "pointer",
-                                                                                                                                                                                                                                                                                                                                                                                                                                                              }}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                      >
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                + Join Community
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                                                                                                                  onClick={joined ? undefined : onJoin}
+                                                                                                                                                                                                                                                                                                                                    disabled={joined}
+                                                                                                                                                                                                                                                                                                                                      style={{
+                                                                                                                                                                                                                                                                                                                                          marginTop: "10px",
+                                                                                                                                                                                                                                                                                                                                              padding: "12px 26px",
+                                                                                                                                                                                                                                                                                                                                                  borderRadius: "999px",
+                                                                                                                                                                                                                                                                                                                                                      border: "none",
+                                                                                                                                                                                                                                                                                                                                                          background: joined ? "#16a34a" : "#7c3aed",
+                                                                                                                                                                                                                                                                                                                                                              color: "#fff",
+                                                                                                                                                                                                                                                                                                                                                                  fontWeight: "bold",
+                                                                                                                                                                                                                                                                                                                                                                      cursor: joined ? "default" : "pointer",
+                                                                                                                                                                                                                                                                                                                                                                        }}
+                                                                                                                                                                                                                                                                                                                                                                        >
+                                                                                                                                                                                                                                                                                                                                                                          {joined ? "✓ Joined" : "+ Join Community"}
+                                                                                                                                                                                                                                                                                                                                                                          </button>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               </div>
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     <hr style={{ margin: "30px 0" }} />

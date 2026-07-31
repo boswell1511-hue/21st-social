@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import supabase from "../lib/supabase";
 import CommunityCard from "../components/community/CommunityCard";
 
 const sampleCommunities = [
@@ -45,8 +46,83 @@ const sampleCommunities = [
                                                                                                                                 }) {
                                                                                                                     
                                                                                                                           const [search, setSearch] = useState("");
+const [communities, setCommunities] = useState(sampleCommunities);
+const [joinedCommunities, setJoinedCommunities] = useState([]);
+useEffect(() => {
+      loadCommunities();
+      loadJoinedCommunities();
+      }, []);
 
-                                                                                                                            const filtered = sampleCommunities.filter((community) =>
+      async function loadCommunities() {
+        const { data, error } = await supabase
+            .from("communities")
+                .select("*")
+                    .order("member_count", { ascending: false });
+
+                      if (error) {
+                          console.error(error);
+                              return;
+                                }
+
+                                  const formatted = data.map((community) => ({
+                                      id: community.id,
+                                          icon: community.icon,
+                                              name: community.name,
+                                                  description: community.description,
+                                                      members: community.member_count,
+                                                          banner: community.banner,
+                                                            }));
+
+                                                              setCommunities(formatted);
+                                                              }
+                                                              async function joinCommunity(communityId) {
+                                                                  const {
+                                                                      data: { user },
+                                                                        } = await supabase.auth.getUser();
+
+                                                                          if (!user) {
+                                                                              alert("Please sign in first.");
+                                                                                  return;
+                                                                                    }
+
+                                                                                      const { error } = await supabase
+                                                                                          .from("community_members")
+                                                                                              .insert({
+                                                                                                    community_id: communityId,
+                                                                                                          user_id: user.id,
+                                                                                                                role: "member",
+                                                                                                                      status: "joined",
+                                                                                                                          });
+
+                                                                                                                            if (error) {
+                                                                                                                                console.error(error);
+                                                                                                                                    alert(error.message);
+                                                                                                                                        return;
+                                                                                                                                          }
+
+                                                                                                                                            setJoinedCommunities((current) => [...current, communityId]);
+                                                                                                                                            }
+                                                              async function loadJoinedCommunities() {
+                                                                  const {
+                                                                      data: { user },
+                                                                        } = await supabase.auth.getUser();
+
+                                                                          if (!user) return;
+
+                                                                            const { data, error } = await supabase
+                                                                                .from("community_members")
+                                                                                    .select("community_id")
+                                                                                        .eq("user_id", user.id);
+
+                                                                                          if (error) {
+                                                                                              console.error(error);
+                                                                                                  return;
+                                                                                                    }
+
+                                                                                                      setJoinedCommunities(data.map((item) => item.community_id));
+                                                                                                      }
+                                                              
+                                                                                                                            const filtered = communities.filter((community) =>
                                                                                                                                 community.name.toLowerCase().includes(search.toLowerCase())
                                                                                                                                   );
 
@@ -79,17 +155,16 @@ const sampleCommunities = [
                                                                                                                                                                                                                                                                                                       name={community.name}
                                                                                                                                                                                                                                                                                                           description={community.description}
                                                                                                                                                                                                                                                                                                               members={community.members}
-                                                                                                                                                                                                                                                                                                                  joined={false}
-                                                                                                                                                                                                                                                                                                                      onJoin={() => {
-                                                                                                                                                                                                                                                                                                                            console.log(`Joined ${community.name}`);
-                                                                                                                                                                                                                                                                                                                                }}
+                                                                                                                                                                                                                                                                                                                  joined={joinedCommunities.includes(community.id)}
+
+                                                                                                                                                                                                                                                                                                                  onJoin={() => joinCommunity(community.id)}
                                                                                                                                                                                                                                                                                                                                     onClick={() => {
                                                                                                                                                                                                                                                                                                                                           if (onOpenCommunity) {
                                                                                                                                                                                                                                                                                                                                               onOpenCommunity(community);
                                                                                                                                                                                                                                                                                                                                                 }
                                                                                                                                                                                                                                                                                                                                                 }}
                                                                                                                                                                                                                                                                                                                                     />
-                                                                                                                                                                                                                                                                                                                                            ))}             
+                                                                                                                                                                                                                                                                                                                                            ))}         
                                                                                                                                                                                                                                                                                                                                                 
                                                                                                                                                                                                                                                                                     
 
@@ -104,6 +179,6 @@ const sampleCommunities = [
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           </p>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               </div>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 );
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             } 
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 export default DiscoverCommunities;
