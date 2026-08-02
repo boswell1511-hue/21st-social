@@ -44,6 +44,7 @@ const sampleCommunities = [
                                                                                                                         function DiscoverCommunities({
                                                                                                                               onOpenCommunity,
                                                                                                                                 onBack,
+                                                                                                                                onCreateCommunity
                                                                                                                                 }) {
                                                                                                                     
                                                                                                                           const [search, setSearch] = useState("");
@@ -129,6 +130,22 @@ useEffect(() => {
                                                                                                                                     return (
                                                                                                                                         <div style={{ padding: "20px", maxWidth: "700px", margin: "0 auto" }}>
                                                                                                                                               <h1>🌱 Discover Communities</h1>
+
+                                                                                                                                              <button
+                                                                                                                                                onClick={onCreateCommunity}
+                                                                                                                                                  style={{
+                                                                                                                                                      marginBottom: "20px",
+                                                                                                                                                          padding: "12px 20px",
+                                                                                                                                                              borderRadius: "10px",
+                                                                                                                                                                  border: "none",
+                                                                                                                                                                      background: "#7c3aed",
+                                                                                                                                                                          color: "#fff",
+                                                                                                                                                                              cursor: "pointer",
+                                                                                                                                                                                  fontWeight: "bold",
+                                                                                                                                                                                    }}
+                                                                                                                                                                                    >
+                                                                                                                                                                                      + Create Community
+                                                                                                                                                                                      </button>
 
                                                                                                                                                     <p>
                                                                                                                                                             Find people who share your passions and interests.

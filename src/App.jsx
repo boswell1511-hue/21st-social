@@ -14,6 +14,7 @@ import Feed from "./pages/Feed";
 import DiscoverCommunities from "./pages/DiscoverCommunities";
 import CommunityDetail from "./pages/CommunityDetail";
 import supabase from "./lib/supabase";
+import CreateCommunity from "./pages/CreateCommunity";
 
 function App() {
   const [screen, setScreen] = useState("welcome");
@@ -178,10 +179,18 @@ case "discoverCommunities":
         onJoinCommunity={joinCommunity}
           onOpenCommunity={(community) => {
               setSelectedCommunity(community);
-                  setScreen("communityDetail");
-                    }}
-                    />                                                 
-                  );
+              setScreen("communityDetail");
+            }}
+            onCreateCommunity={() => setScreen("createCommunity")}
+          />
+        );
+
+                  case "createCommunity":
+                      return (
+                          <CreateCommunity
+                                onBack={() => setScreen("discoverCommunities")}
+                                    />
+                                      );
 
 case "communityDetail":
         return (
