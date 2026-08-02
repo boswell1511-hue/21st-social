@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import supabase from "../lib/supabase";
 import CommunityCard from "../components/community/CommunityCard";
+import CommunityMembershipService from "../services/community/CommunityMembershipService";
 
 const sampleCommunities = [
   {
@@ -75,33 +76,32 @@ useEffect(() => {
 
                                                               setCommunities(formatted);
                                                               }
+                                                              
                                                               async function joinCommunity(communityId) {
-                                                                  const {
-                                                                      data: { user },
-                                                                        } = await supabase.auth.getUser();
+                                                                  try {
+                                                                      await CommunityMembershipService.toggle(communityId);
 
-                                                                          if (!user) {
-                                                                              alert("Please sign in first.");
-                                                                                  return;
-                                                                                    }
+                                                                          const joined = await CommunityMembershipService.isMember(communityId);
 
-                                                                                      const { error } = await supabase
-                                                                                          .from("community_members")
-                                                                                              .insert({
-                                                                                                    community_id: communityId,
-                                                                                                          user_id: user.id,
-                                                                                                                role: "member",
-                                                                                                                      status: "joined",
-                                                                                                                          });
+                                                                              setJoinedCommunities((current) => {
+                                                                                    if (joined) {
+                                                                                            return current.includes(communityId)
+                                                                                                      ? current
+                                                                                                                : [...current, communityId];
+                                                                                                                      }
 
-                                                                                                                            if (error) {
-                                                                                                                                console.error(error);
-                                                                                                                                    alert(error.message);
-                                                                                                                                        return;
-                                                                                                                                          }
+                                                                                                                            return current.filter((id) => id !== communityId);
+                                                                                                                                });
 
-                                                                                                                                            setJoinedCommunities((current) => [...current, communityId]);
-                                                                                                                                            }
+                                                                                                                                    await loadJoinedCommunities();
+                                                                                                                                      } catch (error) {
+                                                                                                                                          console.error(error);
+                                                                                                                                              alert(error.message || "Unable to update community membership.");
+                                                                                                                                                }
+                                                                                                                                                }
+                                                                
+                                                                                                                                    
+                                                                                                                                            
                                                               async function loadJoinedCommunities() {
                                                                   const {
                                                                       data: { user },
