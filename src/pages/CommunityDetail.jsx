@@ -10,21 +10,24 @@ function CommunityDetail({
           }) {
             if (!community) return null;
 
-            const [localJoined, setLocalJoined] = useState(false);
             const [showComposer, setShowComposer] = useState(false);
             const [postText, setPostText] = useState("");
             const [videoUrl, setVideoUrl] = useState("");
             const [loadingPosts, setLoadingPosts] = useState(false);
             const [posts, setPosts] = useState([]);
+            const [memberCount, setMemberCount] = useState(
+                community?.member_count ?? 0
+                );
+            
             useEffect(() => {
-                  checkMembership();
+                  loadCommunity();
                   loadPosts();
                   }, [community]);
 
                   async function checkMembership() {
                       try {
                           const joined = await CommunityMembershipService.isMember(community.id);
-                              setLocalJoined(joined);
+                              setjoined(joined);
                                 } catch (error) {
                                     console.error(error);
                                       }
@@ -42,6 +45,18 @@ function CommunityDetail({
                                                                                                     }
                                                                                                     }
                                                                 
+                                                                                                    async function loadCommunity() {
+                                                                                                        const { data, error } = await supabase
+                                                                                                            .from("communities")
+                                                                                                                .select("member_count")
+                                                                                                                    .eq("id", community.id)
+                                                                                                                        .single();
+
+                                                                                                                          if (!error && data) {
+                                                                                                                              setMemberCount(data.member_count ?? 0);
+                                                                                                                                }
+                                                                                                                                }
+                                                                                                    
                                                                 async function publishPost() {
                                                                           if (!postText.trim()) {
                                                                               alert("Please enter some text first.");
@@ -145,24 +160,25 @@ function CommunityDetail({
                                                                                                                                                                                                                                                                                               <p>{community.description}</p>
 
                                                                                                                                                                                                                                                                                                       <h3>
-                                                                                                                                                                                                                                                                                                                {community.members.toLocaleString()} Members
+                                                                                                                                                                                                                                                                                                               {memberCount.toLocaleString()} Members
                                                                                                                                                                                                                                                                                                                         </h3>
 
                                                                                                                                                                                                                                                                                                                                 <button
-                                                                                                                                                                                                                                                                                                                                  onClick={toggleMembership}
-                                                                                                                                                                                                                                                                                                                                      style={{
-                                                                                                                                                                                                                                                                                                                                          marginTop: "10px",
-                                                                                                                                                                                                                                                                                                                                              padding: "12px 26px",
-                                                                                                                                                                                                                                                                                                                                                  borderRadius: "999px",
-                                                                                                                                                                                                                                                                                                                                                      border: "none",
-                                                                                                                                                                                                                                                                                                                                                          background: localJoined ? "#16a34a" : "#7c3aed",
-                                                                                                                                                                                                                                                                                                                                                              color: "#fff",
-                                                                                                                                                                                                                                                                                                                                                                  fontWeight: "bold",
-                                                                                                                                                                                                                                                                                                                                                                      cursor: localJoined ? "pointer" : "pointer",
-                                                                                                                                                                                                                                                                                                                                                                        }}
-                                                                                                                                                                                                                                                                                                                                                                        >
-                                                                                                                                                                                                                                                                                                                                                                          {localJoined ? "✓ Joined" : "+ Join Community"}
-                                                                                                                                                                                                                                                                                                                                                                          </button>
+                                                                                                                                                                                                                                                                                                                                  onClick={onJoin}
+                                                                                                                                                                                                                                                                                                                                    style={{
+                                                                                                                                                                                                                                                                                                                                        marginTop: "10px",
+                                                                                                                                                                                                                                                                                                                                            padding: "12px 26px",
+                                                                                                                                                                                                                                                                                                                                                borderRadius: "999px",
+                                                                                                                                                                                                                                                                                                                                                    border: "none",
+                                                                                                                                                                                                                                                                                                                                                        background: joined ? "#16a34a" : "#7c3aed",
+                                                                                                                                                                                                                                                                                                                                                            color: "#fff",
+                                                                                                                                                                                                                                                                                                                                                                fontWeight: "bold",
+                                                                                                                                                                                                                                                                                                                                                                    cursor: "pointer",
+                                                                                                                                                                                                                                                                                                                                                                      }}
+                                                                                                                                                                                                                                                                                                                                                                      >
+                                                                                                                                                                                                                                                                                                                                                                        {joined ? "✓ Joined" : "+ Join Community"}
+                                                                                                                                                                                                                                                                                                                                                                        </button>
+
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               </div>
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     <hr style={{ margin: "30px 0" }} />

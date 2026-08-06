@@ -42,6 +42,13 @@ const CommunityService = {
                                                                                                                                                                             role: "owner",
                                                                                                                                                                                 status: "joined",
                                                                                                                                                                                   });
+                                                                                                                                                                                
+                                                                                                                                                                                  await supabase
+                                                                                                                                                                                    .from("communities")
+                                                                                                                                                                                      .update({
+                                                                                                                                                                                          member_count: 1,
+                                                                                                                                                                                            })
+                                                                                                                                                                                              .eq("id", data.id);
                                                                                                                                                                 return data;
                                                                                                                                                                   },
                                                                                                                                                                   };

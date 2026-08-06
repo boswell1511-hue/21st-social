@@ -15,6 +15,7 @@ import DiscoverCommunities from "./pages/DiscoverCommunities";
 import CommunityDetail from "./pages/CommunityDetail";
 import supabase from "./lib/supabase";
 import CreateCommunity from "./pages/CreateCommunity";
+import CommunityMembershipService from "./services/community/CommunityMembershipService";
 
 function App() {
   const [screen, setScreen] = useState("welcome");
@@ -40,35 +41,7 @@ async function loadJoinedCommunities() {
 
                                             setJoinedCommunities(data.map((item) => item.community_id));
                                             }
-
-                                            async function joinCommunity(communityId) {
-                                              const {
-                                                  data: { user },
-                                                    } = await supabase.auth.getUser();
-
-                                                      if (!user) {
-                                                          alert("Please sign in first.");
-                                                              return;
-                                                                }
-
-                                                                  const { error } = await supabase
-                                                                      .from("community_members")
-                                                                          .insert({
-                                                                                community_id: communityId,
-                                                                                      user_id: user.id,
-                                                                                            role: "member",
-                                                                                                  status: "joined",
-                                                                                                      });
-
-                                                                                                        if (error) {
-                                                                                                            console.error(error);
-                                                                                                                alert(error.message);
-                                                                                                                    return;
-                                                                                                                      }
-
-                                                                                                                        setJoinedCommunities((current) => [...current, communityId]);
-                                                                                                                        }
-                                                                                                                      
+                                          
                                                                                                                         useEffect(() => {
                                                                                                                             loadJoinedCommunities();
                                                                                                                             }, []);
@@ -176,7 +149,10 @@ case "discoverCommunities":
   onBack={() => setScreen("home")}
     joinedCommunities={joinedCommunities}
       setJoinedCommunities={setJoinedCommunities}
-        onJoinCommunity={joinCommunity}
+        onJoinCommunity={async (communityId) => {
+              await CommunityMembershipService.toggle(communityId);
+                  await loadJoinedCommunities();
+                  }}
           onOpenCommunity={(community) => {
               setSelectedCommunity(community);
               setScreen("communityDetail");
@@ -197,7 +173,24 @@ case "communityDetail":
             <CommunityDetail
                   community={selectedCommunity}
                         onBack={() => setScreen("discoverCommunities")}
-                              onJoin={() => joinCommunity(selectedCommunity.id)}
+                            onJoin={async () => {
+                                  await CommunityMembershipService.toggle(selectedCommunity.id);
+
+                                      // Refresh joined state
+                                          await loadJoinedCommunities();
+
+                                              // Refresh the selected community
+                                                  const { data, error } = await supabase
+                                                          .from("communities")
+                                                                  .select("*")
+                                                                          .eq("id", selectedCommunity.id)
+                                                                                  .single();
+
+                                                                                      if (!error && data) {
+                                                                                              setSelectedCommunity(data);
+                                                                                                  }
+                                                                                                  }}
+                            
                               joined={joinedCommunities.includes(selectedCommunity?.id)}
                                                 />
                                                   );

@@ -25,34 +25,69 @@ const CommunityMembershipService = {
                                                                         },
 
                                                                           async join(communityId) {
-                                                                              const user = await this.getCurrentUser();
+                                                                                const user = await this.getCurrentUser();
 
-                                                                                if (!user) throw new Error("Please sign in first.");
+                                                                                    if (!user) throw new Error("Please sign in first.");
 
-                                                                                  return supabase
-                                                                                      .from("community_members")
-                                                                                          .insert({
-                                                                                                community_id: communityId,
-                                                                                                      user_id: user.id,
-                                                                                                            role: "member",
-                                                                                                                  status: "joined",
-                                                                                                                      })
-                                                                                                                          .select();
-                                                                                                                          },
-                                                                          
-                                                                                                                                
+                                                                                        // Add membership
+                                                                                            const { error } = await supabase
+                                                                                                    .from("community_members")
+                                                                                                            .insert({
+                                                                                                                        community_id: communityId,
+                                                                                                                                    user_id: user.id,
+                                                                                                                                                role: "member",
+                                                                                                                                                            status: "joined",
+                                                                                                                                                                    });
+
+                                                                                                                                                                        if (error) throw error;
+
+                                                                                                                                                                            // Read current member count
+                                                                                                                                                                                const { data: community } = await supabase
+                                                                                                                                                                                        .from("communities")
+                                                                                                                                                                                                .select("member_count")
+                                                                                                                                                                                                        .eq("id", communityId)
+                                                                                                                                                                                                                .single();
+
+                                                                                                                                                                                                                    // Increment count
+                                                                                                                                                                                                                        await supabase
+                                                                                                                                                                                                                                .from("communities")
+                                                                                                                                                                                                                                        .update({
+                                                                                                                                                                                                                                                    member_count: (community.member_count ?? 0) + 1,
+                                                                                                                                                                                                                                                            })
+                                                                                                                                                                                                                                                                    .eq("id", communityId);
+                                                                                                                                                                                                                                                                    },
+                                                                                                                                                                                                                                                                  
 
                                                                                                                       async leave(communityId) {
-                                                                                                                          const user = await this.getCurrentUser();
+                                                                                                                            const user = await this.getCurrentUser();
 
-                                                                                                                              if (!user) throw new Error("Please sign in first.");
+                                                                                                                                if (!user) throw new Error("Please sign in first.");
 
-                                                                                                                                  return supabase
-                                                                                                                                        .from("community_members")
-                                                                                                                                              .delete()
-                                                                                                                                                    .eq("community_id", communityId)
-                                                                                                                                                          .eq("user_id", user.id);
-                                                                                                                                                            },
+                                                                                                                                    // Remove membership
+                                                                                                                                        const { error } = await supabase
+                                                                                                                                                .from("community_members")
+                                                                                                                                                        .delete()
+                                                                                                                                                                .eq("community_id", communityId)
+                                                                                                                                                                        .eq("user_id", user.id);
+
+                                                                                                                                                                            if (error) throw error;
+
+                                                                                                                                                                                // Read current member count
+                                                                                                                                                                                    const { data: community } = await supabase
+                                                                                                                                                                                            .from("communities")
+                                                                                                                                                                                                    .select("member_count")
+                                                                                                                                                                                                            .eq("id", communityId)
+                                                                                                                                                                                                                    .single();
+
+                                                                                                                                                                                                                        // Decrement count (never below zero)
+                                                                                                                                                                                                                            await supabase
+                                                                                                                                                                                                                                    .from("communities")
+                                                                                                                                                                                                                                            .update({
+                                                                                                                                                                                                                                                        member_count: Math.max((community.member_count ?? 1) - 1, 0),
+                                                                                                                                                                                                                                                                })
+                                                                                                                                                                                                                                                                        .eq("id", communityId);
+                                                                                                                                                                                                                                                                        },
+                                                                                                                      
 
                                                                                                                                                               async toggle(communityId) {
                                                                                                                                                                   const joined = await this.isMember(communityId);

@@ -44,12 +44,14 @@ const sampleCommunities = [
                                                                                                                         function DiscoverCommunities({
                                                                                                                               onOpenCommunity,
                                                                                                                                 onBack,
-                                                                                                                                onCreateCommunity
+                                                                                                                                onCreateCommunity,
+                                                                                                                                joinedCommunities,
+                                                                                                                                setJoinedCommunities,
+                                                                                                                                onJoinCommunity,
                                                                                                                                 }) {
                                                                                                                     
                                                                                                                           const [search, setSearch] = useState("");
 const [communities, setCommunities] = useState(sampleCommunities);
-const [joinedCommunities, setJoinedCommunities] = useState([]);
 useEffect(() => {
       loadCommunities();
       loadJoinedCommunities();
@@ -77,32 +79,7 @@ useEffect(() => {
 
                                                               setCommunities(formatted);
                                                               }
-                                                              
-                                                              async function joinCommunity(communityId) {
-                                                                  try {
-                                                                      await CommunityMembershipService.toggle(communityId);
-
-                                                                          const joined = await CommunityMembershipService.isMember(communityId);
-
-                                                                              setJoinedCommunities((current) => {
-                                                                                    if (joined) {
-                                                                                            return current.includes(communityId)
-                                                                                                      ? current
-                                                                                                                : [...current, communityId];
-                                                                                                                      }
-
-                                                                                                                            return current.filter((id) => id !== communityId);
-                                                                                                                                });
-
-                                                                                                                                    await loadJoinedCommunities();
-                                                                                                                                      } catch (error) {
-                                                                                                                                          console.error(error);
-                                                                                                                                              alert(error.message || "Unable to update community membership.");
-                                                                                                                                                }
-                                                                                                                                                }
-                                                                
-                                                                                                                                    
-                                                                                                                                            
+                                                                                                                                              
                                                               async function loadJoinedCommunities() {
                                                                   const {
                                                                       data: { user },
@@ -174,7 +151,10 @@ useEffect(() => {
                                                                                                                                                                                                                                                                                                               members={community.members}
                                                                                                                                                                                                                                                                                                                   joined={joinedCommunities.includes(community.id)}
 
-                                                                                                                                                                                                                                                                                                                  onJoin={() => joinCommunity(community.id)}
+                                                                                                                                                                                                                                                                                                                  onJoin={async () => {
+                                                                                                                                                                                                                                                                                                                        await onJoinCommunity(community.id);
+                                                                                                                                                                                                                                                                                                                            await loadCommunities();
+                                                                                                                                                                                                                                                                                                                            }}
                                                                                                                                                                                                                                                                                                                                     onClick={() => {
                                                                                                                                                                                                                                                                                                                                           if (onOpenCommunity) {
                                                                                                                                                                                                                                                                                                                                               onOpenCommunity(community);
@@ -187,7 +167,7 @@ useEffect(() => {
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   {filtered.length === 0 && (
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           <p>No communities found.</p>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                )}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          )}
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       <hr style={{ marginTop: "30px" }} />
 
