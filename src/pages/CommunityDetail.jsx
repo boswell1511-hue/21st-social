@@ -23,12 +23,69 @@ function CommunityDetail({
             const [memberCount, setMemberCount] = useState(
                 community?.member_count ?? 0
                 );
+
+            const [hasAccess, setHasAccess] = useState(false);
+            const [checkingAccess, setCheckingAccess] = useState(true);
             
             useEffect(() => {
-                  loadCommunity();
-                  loadSections();
-                  loadPosts();
-                  }, [community]);
+                  async function initializeCommunity() {
+                      setCheckingAccess(true);
+
+                          loadCommunity();
+
+                              const accessGranted = await checkCommunityAccess();
+
+                                  if (accessGranted) {
+                                        await loadSections();
+                                              await loadPosts();
+                                                  } else {
+                                                        setSections([]);
+                                                              setPosts([]);
+                                                                  }
+
+                                                                      setCheckingAccess(false);
+                                                                        }
+
+                                                                          initializeCommunity();
+                                                                          }, [community]);
+
+                  async function checkCommunityAccess() {
+                      const { data: { user } } = await supabase.auth.getUser();
+
+                        if (!user) {
+                            const accessGranted = community.visibility === "public";
+                                setHasAccess(accessGranted);
+                                    return accessGranted;
+                                      }
+
+                                        if (community.owner_id === user.id) {
+                                            setHasAccess(true);
+                                                return true;
+                                                  }
+
+                                                    if (community.visibility === "public") {
+                                                        setHasAccess(true);
+                                                            return true;
+                                                              }
+
+                                                                const { data, error } = await supabase
+                                                                    .from("community_members")
+                                                                        .select("id")
+                                                                            .eq("community_id", community.id)
+                                                                                .eq("user_id", user.id)
+                                                                                    .eq("status", "joined")
+                                                                                        .maybeSingle();
+
+                                                                                          if (error) {
+                                                                                              console.error(error);
+                                                                                                  setHasAccess(false);
+                                                                                                      return false;
+                                                                                                        }
+
+                                                                                                          const accessGranted = !!data;
+                                                                                                            setHasAccess(accessGranted);
+                                                                                                              return accessGranted;
+                                                                                                              }
                                                                 
                                                                                                     async function loadCommunity() {
                                                                                                         const { data, error } = await supabase
@@ -160,7 +217,32 @@ function CommunityDetail({
                                                                                                                                                                                                                         setPosts(data || []);
                                                                                                                                                                                                                           setLoadingPosts(false);
                                                                                                                                                                                                                           }
-                                                                
+            
+           if (checkingAccess) {
+              return (
+                  <div className="flex items-center justify-center min-h-screen">
+                        Loading community...
+                            </div>
+                              );
+                              }
+
+                              if (!hasAccess) {
+                                return (
+                                    <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center">
+                                          <div className="text-5xl mb-4">🔒</div>
+
+                                                <h2 className="text-xl font-bold mb-2">
+                                                        Private Community
+                                                              </h2>
+
+                                                                    <p className="text-sm opacity-70 max-w-sm">
+                                                                            This community is private. You must be invited by the community owner
+                                                                                    or an administrator to access its content.
+                                                                                          </p>
+                                                                                              </div>
+                                                                                                );
+                                                                                                }
+                                                                                                                                                                                                                          
            return (
                   <div
                         style={{

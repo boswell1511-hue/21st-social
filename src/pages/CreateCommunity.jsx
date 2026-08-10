@@ -12,7 +12,7 @@ function CreateCommunity({ onBack }) {
                         name,
                               description,
                                     icon,
-                                          privacy,
+                                       visibility: privacy,
                                               });
 
                                                   alert("Community created successfully!");
