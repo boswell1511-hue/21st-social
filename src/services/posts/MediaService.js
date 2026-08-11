@@ -8,8 +8,8 @@ const MediaService = {
             data: { user },
                   error,
                       } = await supabase.auth.getUser();
-                      if (error) throw error;
-                          
+
+                          if (error) throw error;
 
                               return user;
                                 },
@@ -23,77 +23,106 @@ const MediaService = {
                                                     throw new Error("No authenticated user.");
                                                         }
 
-                                                            const extension = file.name.split(".").pop();
-                                                                const fileName = `${user.id}/${Date.now()}.${extension}`;
+                                                            if (!file.type.startsWith("image/")) {
+                                                                  throw new Error("Please select a valid image file.");
+                                                                      }
 
-                                                                    const { error } = await supabase.storage
-                                                                          .from(BUCKET_NAME)
-                                                                                .upload(fileName, file);
+                                                                          const extension = file.name.split(".").pop();
+                                                                              const fileName = `${user.id}/${Date.now()}.${extension}`;
 
-                                                                                    if (error) throw error;
+                                                                                  const { error } = await supabase.storage
+                                                                                        .from(BUCKET_NAME)
+                                                                                              .upload(fileName, file);
 
-                                                                                        const { data } = supabase.storage
-                                                                                              .from(BUCKET_NAME)
-                                                                                                    .getPublicUrl(fileName);
+                                                                                                  if (error) throw error;
 
-                                                                                                        return data.publicUrl;
-                                                                                                          },
+                                                                                                      const { data } = supabase.storage
+                                                                                                            .from(BUCKET_NAME)
+                                                                                                                  .getPublicUrl(fileName);
 
-                                                                                                            async attachMedia({
-                                                                                                                postId,
-                                                                                                                    mediaUrl,
-                                                                                                                        mediaType = "image",
-                                                                                                                            sortOrder = 0
-                                                                                                                              }) 
-                                                                                                                              {
+                                                                                                                      return data.publicUrl;
+                                                                                                                        },
 
-                                                                                                                                                                  const { data, error } = await supabase
-                                                                                                                                                                        .from("post_media")
-                                                                                                                                                                              .insert({
-                                                                                                                                                                                      post_id: postId,
-                                                                                                                                                                                              media_url: mediaUrl,
-                                                                                                                                                                                                      media_type: mediaType,
-                                                                                                                                                                                                              sort_order: sortOrder,
-                                                                                                                                                                                                                    })
-                                                                                                                                                                                                                          .select()
-                                                                                                                                                                                                                                .single();
+                                                                                                                          async uploadVideo(file) {
+                                                                                                                              if (!file) return "";
 
-                                                                                                                                                                                                                                    
-                                                                                                                                                                                                                                     if (error) throw error;
-                                                                                                                                                                                                                                     
-                                                                                                                                                                                                                                     return data;
-                                                                                                                                                                                                                                                              },
+                                                                                                                                  const user = await this.getCurrentUser();
 
-                                                                                                                                                                                                                                                                async getPostMedia(postId) {
-                                                                                                                                                                                                                                                                        const { data, error } = await supabase
-                                                                                                                                                                                                                                                                                .from("post_media")
-                                                                                                                                                                                                                                                                                        .select("*")
-                                                                                                                                                                                                                                                                                                .eq("post_id", postId)
-                                                                                                                                                                                                                                                                                                        .order("sort_order", { ascending: true });
+                                                                                                                                      if (!user) {
+                                                                                                                                            throw new Error("No authenticated user.");
+                                                                                                                                                }
 
-                                                                                                                                                                                                                                                                                                            if (error) throw error;
+                                                                                                                                                    if (!file.type.startsWith("video/")) {
+                                                                                                                                                          throw new Error("Please select a valid video file.");
+                                                                                                                                                              }
 
-                                                                                                                                                                                                                                                                                                                return data || [];
+                                                                                                                                                                  const extension = file.name.split(".").pop();
+                                                                                                                                                                      const fileName = `${user.id}/${Date.now()}.${extension}`;
+
+                                                                                                                                                                          const { error } = await supabase.storage
+                                                                                                                                                                                .from(BUCKET_NAME)
+                                                                                                                                                                                      .upload(fileName, file);
+
+                                                                                                                                                                                          if (error) throw error;
+
+                                                                                                                                                                                              const { data } = supabase.storage
+                                                                                                                                                                                                    .from(BUCKET_NAME)
+                                                                                                                                                                                                          .getPublicUrl(fileName);
+
+                                                                                                                                                                                                              return data.publicUrl;
+                                                                                                                                                                                                                },
+
+                                                                                                                                                                                                                  async attachMedia({
+                                                                                                                                                                                                                      postId,
+                                                                                                                                                                                                                          mediaUrl,
+                                                                                                                                                                                                                              mediaType = "image",
+                                                                                                                                                                                                                                  sortOrder = 0,
+                                                                                                                                                                                                                                    }) {
+                                                                                                                                                                                                                                        const { data, error } = await supabase
+                                                                                                                                                                                                                                              .from("post_media")
+                                                                                                                                                                                                                                                    .insert({
+                                                                                                                                                                                                                                                            post_id: postId,
+                                                                                                                                                                                                                                                                    media_url: mediaUrl,
+                                                                                                                                                                                                                                                                            media_type: mediaType,
+                                                                                                                                                                                                                                                                                    sort_order: sortOrder,
+                                                                                                                                                                                                                                                                                          })
+                                                                                                                                                                                                                                                                                                .select()
+                                                                                                                                                                                                                                                                                                      .single();
+
+                                                                                                                                                                                                                                                                                                          if (error) throw error;
+
+                                                                                                                                                                                                                                                                                                              return data;
                                                                                                                                                                                                                                                                                                                 },
-                                                                                                                                                                                                                                                                
 
-                                                                                                                                                                                                                                                                                                        async deleteMedia(url) {
-                                                                                                                                                                                                                                                                                                            if (!url) return;
+                                                                                                                                                                                                                                                                                                                  async getPostMedia(postId) {
+                                                                                                                                                                                                                                                                                                                      const { data, error } = await supabase
+                                                                                                                                                                                                                                                                                                                            .from("post_media")
+                                                                                                                                                                                                                                                                                                                                  .select("*")
+                                                                                                                                                                                                                                                                                                                                        .eq("post_id", postId)
+                                                                                                                                                                                                                                                                                                                                              .order("sort_order", { ascending: true });
 
-                                                                                                                                                                                                                                                                                                                const parts = url.split("/post-media/");
+                                                                                                                                                                                                                                                                                                                                                  if (error) throw error;
 
-                                                                                                                                                                                                                                                                                                                    if (parts.length < 2) return;
+                                                                                                                                                                                                                                                                                                                                                      return data || [];
+                                                                                                                                                                                                                                                                                                                                                        },
 
-                                                                                                                                                                                                                                                                                                                        const filePath = parts[1];
+                                                                                                                                                                                                                                                                                                                                                          async deleteMedia(url) {
+                                                                                                                                                                                                                                                                                                                                                              if (!url) return;
 
-                                                                                                                                                                                                                                                                                                                            const { error } = await supabase.storage
-                                                                                                                                                                                                                                                                                                                                  .from(BUCKET_NAME)
-                                                                                                                                                                                                                                                                                                                                        .remove([filePath]);
+                                                                                                                                                                                                                                                                                                                                                                  const parts = url.split("/post-media/");
 
-                                                                                                                                                                                                                                                                                                                                            if (error) throw error;
+                                                                                                                                                                                                                                                                                                                                                                      if (parts.length < 2) return;
 
-                                                                                                                                                                                                                                                                                                                                                return true;
-                                                                                                                                                                                                                                                                                                                                                  },
-                                                                                                                                                                                                                                                                                                                                                  };
+                                                                                                                                                                                                                                                                                                                                                                          const filePath = parts[1];
 
-                                                                                                                                                                                                                                                                                                                                                  export default MediaService;
+                                                                                                                                                                                                                                                                                                                                                                              const { error } = await supabase.storage
+                                                                                                                                                                                                                                                                                                                                                                                    .from(BUCKET_NAME)
+                                                                                                                                                                                                                                                                                                                                                                                          .remove([filePath]);
+
+                                                                                                                                                                                                                                                                                                                                                                                              if (error) throw error;
+
+                                                                                                                                                                                                                                                                                                                                                                                                  return true;
+                                                                                                                                                                                                                                                                                                                                                                                                    },
+                                                                                                                                                                                                                                                                                                                                                                                                    };
+
+                                                                                                                                                                                                                                                                                                                                                                                                    export default MediaService;

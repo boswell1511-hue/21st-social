@@ -152,22 +152,40 @@ function Feed({
                         marginBottom: "16px",
                             }}
                               >
-                                  {post.post_media.map((media) => (
-                                        <img
-                                                key={media.id}
-                                                        src={media.media_url}
-                                                                alt="Post"
-                                                                        style={{
-                                                                                  width: "100%",
-                                                                                            borderRadius: "12px",
-                                                                                                      objectFit: "cover",
-                                                                                                                marginBottom: "12px",
-                                                                                                                        }}
-                                                                                                                              />
-                                                                                                                                  ))}
-                                                                                                                                    </div>
-                                                                                                                                    )}
-)
+                                  {post.post_media.map((media) =>
+                                        media.media_type === "video" ? (
+                                                <video
+                                                          key={media.id}
+                                                                    src={media.media_url}
+                                                                              controls
+                                                                                        playsInline
+                                                                                                  preload="metadata"
+                                                                                                            style={{
+                                                                                                                        width: "100%",
+                                                                                                                                    borderRadius: "12px",
+                                                                                                                                                marginBottom: "12px",
+                                                                                                                                                            display: "block",
+                                                                                                                                                                      }}
+                                                                                                                                                                              >
+                                                                                                                                                                                        Your browser does not support video playback.
+                                                                                                                                                                                                </video>
+                                                                                                                                                                                                      ) : (
+                                                                                                                                                                                                              <img
+                                                                                                                                                                                                                        key={media.id}
+                                                                                                                                                                                                                                  src={media.media_url}
+                                                                                                                                                                                                                                            alt="Post"
+                                                                                                                                                                                                                                                      style={{
+                                                                                                                                                                                                                                                                  width: "100%",
+                                                                                                                                                                                                                                                                              borderRadius: "12px",
+                                                                                                                                                                                                                                                                                          objectFit: "cover",
+                                                                                                                                                                                                                                                                                                      marginBottom: "12px",
+                                                                                                                                                                                                                                                                                                                  display: "block",
+                                                                                                                                                                                                                                                                                                                            }}
+                                                                                                                                                                                                                                                                                                                                    />
+                                                                                                                                                                                                                                                                                                                                          )
+                                                                                                                                                                                                                                                                                                                                              )}
+                                                                                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                                                                                )}
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         <small>{formatDate(post.created_at)}</small>
 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   <div
