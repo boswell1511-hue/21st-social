@@ -1,0 +1,444 @@
+
+=== src/App.jsx:88 | TABLE: community_members | OPS: select, eq ===
+const { data, error } = await supabase
+.from("community_members")
+.select("community_id")
+.eq("user_id", user.id);
+
+=== src/App.jsx:258 | TABLE: communities | OPS: select, eq, single ===
+// Refresh the selected community
+const { data, error } = await supabase
+.from("communities")
+.select("*")
+.eq("id", selectedCommunity.id)
+.single();
+
+=== src/pages/CommunityDetail.jsx:152 | TABLE: community_members | OPS: select, eq, eq, eq, maybeSingle ===
+}
+const { data, error } = await supabase
+.from("community_members")
+.select("id")
+.eq("community_id", community.id)
+.eq("user_id", user.id)
+.eq("status", "joined")
+.maybeSingle();
+
+=== src/pages/CommunityDetail.jsx:172 | TABLE: communities | OPS: select, eq, single ===
+}
+async function loadCommunity() {
+const { data, error } = await supabase
+.from("communities")
+.select("member_count")
+.eq("id", community.id)
+.single();
+
+=== src/pages/CommunityDetail.jsx:184 | TABLE: community_sections | OPS: select, eq, order ===
+}
+}
+async function loadSections() {
+const { data, error } = await supabase
+.from("community_sections")
+.select("*")
+.eq("community_id", community.id)
+.order("sort_order", { ascending: true });
+
+=== src/pages/CommunityDetail.jsx:207 | TABLE: community_sections | OPS: insert ===
+}
+const { error } = await supabase.from("community_sections").insert({
+community_id: community.id,
+name: sectionName.trim(),
+description: sectionDescription.trim() || "",
+icon: sectionIcon.trim() || "📁",
+sort_order: sections.length,
+});
+
+=== src/pages/CommunityDetail.jsx:234 | TABLE: community_posts | OPS: select, eq, order ===
+try {
+const { data, error } = await supabase
+.from("community_posts")
+.select(`
+*,
+community_sections (
+id,
+name,
+icon
+)
+`)
+.eq("community_id", community.id)
+.order("created_at", { ascending: false });
+
+=== src/pages/CommunityDetail.jsx:877 | TABLE: community_posts | OPS: insert, select, single ===
+}
+const { data: post, error: postError } = await supabase
+.from("community_posts")
+.insert({
+community_id: community.id,
+section_id: selectedSectionId || null,
+user_id: user.id,
+post_type: postType,
+text_content: postText.trim() || null,
+// Videos belong directly on community_posts.video_url.
+// Do not create a post_media row for recorded videos because the
+// current Supabase RLS contract does not authorize that insert.
+video_url: mediaType === "video" ? uploadedMediaUrl : null,
+})
+.select()
+.single();
+
+=== src/pages/DiscoverCommunities.jsx:89 | TABLE: community_members | OPS: select, eq, eq ===
+.from("community_members")
+.select("community_id")
+.eq("user_id", user.id)
+.eq("status", "joined");
+
+=== src/pages/ProfileSetup.jsx:56 | TABLE: profiles | OPS: insert ===
+const { error } = await supabase
+.from("profiles")
+.insert({
+id: user.id,
+display_name: displayName,
+username,
+bio,
+avatar_url: avatarUrl,
+});
+
+=== src/services/community/CommunityMembershipService.js:18 | TABLE: community_members | OPS: select, eq, eq, maybeSingle ===
+const { data } = await supabase
+.from("community_members")
+.select("id")
+.eq("community_id", communityId)
+.eq("user_id", user.id)
+.maybeSingle();
+
+=== src/services/community/CommunityMembershipService.js:34 | TABLE: community_members | OPS: insert ===
+const { error } = await supabase
+.from("community_members")
+.insert({
+community_id: communityId,
+user_id: user.id,
+role: "member",
+status: "joined",
+});
+
+=== src/services/community/CommunityMembershipService.js:46 | TABLE: communities | OPS: select, eq, single ===
+await supabase
+.from("communities")
+.select("member_count")
+.eq("id", communityId)
+.single();
+
+=== src/services/community/CommunityMembershipService.js:53 | TABLE: communities | OPS: update, eq ===
+.from("communities")
+.update({
+member_count: (community.member_count ?? 0) + 1,
+})
+.eq("id", communityId);
+
+=== src/services/community/CommunityMembershipService.js:68 | TABLE: community_members | OPS: delete, eq, eq ===
+const { error } = await supabase
+.from("community_members")
+.delete()
+.eq("community_id", communityId)
+.eq("user_id", user.id);
+
+=== src/services/community/CommunityMembershipService.js:77 | TABLE: communities | OPS: select, eq, single ===
+it supabase
+.from("communities")
+.select("member_count")
+.eq("id", communityId)
+.single();
+
+=== src/services/community/CommunityMembershipService.js:84 | TABLE: communities | OPS: update, eq ===
+.from("communities")
+.update({
+member_count: Math.max((community.member_count ?? 1) - 1, 0),
+})
+.eq("id", communityId);
+
+=== src/services/community/CommunityService.js:25 | TABLE: communities | OPS: insert, select, single ===
+}
+const { data, error } = await supabase
+.from("communities")
+.insert({
+name,
+description,
+icon,
+visibility,
+owner_id: user.id,
+})
+.select()
+.single();
+
+=== src/services/community/CommunityService.js:41 | TABLE: community_members | OPS: insert ===
+t { error: memberError } = await supabase
+.from("community_members")
+.insert({
+community_id: data.id,
+user_id: user.id,
+role: "owner",
+status: "joined",
+});
+
+=== src/services/community/CommunityService.js:54 | TABLE: communities | OPS: update, eq ===
+.from("communities")
+.update({
+member_count: 1,
+})
+.eq("id", data.id);
+
+=== src/services/community/CommunityService.js:69 | TABLE: communities | OPS: select, eq, order ===
+.from("communities")
+.select("*")
+.eq("visibility", "public")
+.order("created_at", { ascending: false });
+
+=== src/services/community/CommunityService.js:83 | TABLE: communities | OPS: select, eq, single ===
+.from("communities")
+.select("*")
+.eq("id", communityId)
+.single();
+
+=== src/services/community/CommunityService.js:113 | TABLE: community_members | OPS: select, eq, eq, eq, maybeSingle ===
+.from("community_members")
+.select("id")
+.eq("community_id", communityId)
+.eq("user_id", user.id)
+.eq("status", "joined")
+.maybeSingle();
+
+=== src/services/community/CommunityService.js:137 | TABLE: community_members | OPS: select, eq, eq ===
+.from("community_members")
+.select("community_id")
+.eq("user_id", user.id)
+.eq("status", "joined");
+
+=== src/services/community/CommunityService.js:155 | TABLE: communities | OPS: select, in, order ===
+.from("communities")
+.select("*")
+.in("id", communityIds)
+.order("created_at", { ascending: false });
+
+=== src/services/friends/FollowService.js:21 | TABLE: follows | OPS: select, eq, eq, maybeSingle ===
+const { data, error } = await supabase
+.from("follows")
+.select("id")
+.eq("follower_id", user.id)
+.eq("following_id", userId)
+.maybeSingle();
+
+=== src/services/friends/FollowService.js:38 | TABLE: follows | OPS: insert ===
+const { error } = await supabase
+.from("follows")
+.insert({
+follower_id: user.id,
+following_id: userId,
+});
+
+=== src/services/friends/FollowService.js:53 | TABLE: follows | OPS: delete, eq, eq ===
+const { error } = await supabase
+.from("follows")
+.delete()
+.eq("follower_id", user.id)
+.eq("following_id", userId);
+
+=== src/services/friends/FollowService.js:63 | TABLE: follows | OPS: select, eq ===
+ase
+.from("follows")
+.select("*", { count: "exact", head: true })
+.eq("following_id", userId);
+
+=== src/services/friends/FollowService.js:74 | TABLE: follows | OPS: select, eq ===
+.from("follows")
+.select("*", { count: "exact", head: true })
+.eq("follower_id", userId);
+
+=== src/services/friends/FriendService.js:6 | TABLE: profiles | OPS: select ===
+const FriendService = {
+async searchUsers(search = "") {
+let query = supabase
+.from("profiles")
+.select("id, display_name, username, avatar_url");
+
+=== src/services/posts/CommentService.js:23 | TABLE: comments | OPS: insert, select, single ===
+}
+const { data, error } = await supabase
+.from("comments")
+.insert({
+user_id: user.id,
+post_id: postId,
+content,
+})
+.select()
+.single();
+
+=== src/services/posts/CommentService.js:39 | TABLE: comments | OPS: select, eq, order ===
+const { data, error } = await supabase
+.from("comments")
+.select(`
+*,
+profiles (
+id,
+display_name,
+username,
+avatar_url
+)
+`)
+.eq("post_id", postId)
+.order("created_at", { ascending: true });
+
+=== src/services/posts/CommentService.js:59 | TABLE: comments | OPS: select, eq ===
+.from("comments")
+.select("*", {
+count: "exact",
+head: true,
+})
+.eq("post_id", postId);
+
+=== src/services/posts/CommentService.js:73 | TABLE: comments | OPS: delete, eq ===
+.from("comments")
+.delete()
+.eq("id", commentId);
+
+=== src/services/posts/LikeService.js:23 | TABLE: likes | OPS: insert ===
+}
+const { error } = await supabase
+.from("likes")
+.insert({
+user_id: user.id,
+post_id: postId,
+});
+
+=== src/services/posts/LikeService.js:42 | TABLE: likes | OPS: delete, eq, eq ===
+const { error } = await supabase
+.from("likes")
+.delete()
+.eq("user_id", user.id)
+.eq("post_id", postId);
+
+=== src/services/posts/LikeService.js:58 | TABLE: likes | OPS: select, eq, eq, maybeSingle ===
+or } = await supabase
+.from("likes")
+.select("id")
+.eq("user_id", user.id)
+.eq("post_id", postId)
+.maybeSingle();
+
+=== src/services/posts/LikeService.js:71 | TABLE: likes | OPS: select, eq ===
+.from("likes")
+.select("*", {
+count: "exact",
+head: true,
+})
+.eq("post_id", postId);
+
+=== src/services/posts/MediaService.js:82 | TABLE: post_media | OPS: insert, select, single ===
+.from("post_media")
+.insert({
+post_id: postId,
+media_url: mediaUrl,
+media_type: mediaType,
+sort_order: sortOrder,
+})
+.select()
+.single();
+
+=== src/services/posts/MediaService.js:99 | TABLE: post_media | OPS: select, eq, order ===
+.from("post_media")
+.select("*")
+.eq("post_id", postId)
+.order("sort_order", { ascending: true });
+
+=== src/services/posts/PostService.js:23 | TABLE: posts | OPS: insert, select, single ===
+}
+const { data, error } = await supabase
+.from("posts")
+.insert({
+user_id: user.id,
+content,
+})
+.select()
+.single();
+
+=== src/services/posts/PostService.js:38 | TABLE: posts | OPS: select, order ===
+const { data, error } = await supabase
+.from("posts")
+.select(`
+*,
+profiles (
+id,
+username,
+display_name,
+avatar_url
+),
+post_media (
+id,
+media_url,
+media_type,
+sort_order
+)
+`)
+.order("created_at", { ascending: false });
+
+=== src/services/posts/PostService.js:63 | TABLE: posts | OPS: select ===
+.from("posts")
+.select(`
+*,
+profiles (
+id,
+username,
+display_name,
+avatar_url
+),
+post_media (
+id,
+media_url,
+
+=== src/services/posts/PostService.js:89 | TABLE: posts | OPS: delete, eq ===
+.from("posts")
+.delete()
+.eq("id", postId);
+
+=== src/services/profile/ProfileService.js:23 | TABLE: profiles | OPS: select, eq, maybeSingle ===
+const { data, error } = await supabase
+.from("profiles")
+.select("id")
+.eq("id", user.id)
+.maybeSingle();
+
+=== src/services/profile/ProfileService.js:39 | TABLE: profiles | OPS: select, eq, single ===
+const { data, error } = await supabase
+.from("profiles")
+.select("*")
+.eq("id", user.id)
+.single();
+
+=== src/services/profile/ProfileService.js:57 | TABLE: profiles | OPS: insert, select, single ===
+const { data, error } = await supabase
+.from("profiles")
+.insert({
+id: user.id,
+...profile,
+})
+.select()
+.single();
+
+=== src/services/profile/ProfileService.js:78 | TABLE: profiles | OPS: update, eq, select, single ===
+.from("profiles")
+.update(profile)
+.eq("id", user.id)
+.select()
+.single();
+
+=== src/services/profile/ProfileService.js:114 | TABLE: profiles | OPS: select, eq, single ===
+},
+async getProfileById(userId) {
+const { data, error } = await supabase
+.from("profiles")
+.select("*")
+.eq("id", userId)
+.single();
+
+=== src/services/profile/ProfileService.js:136 | TABLE: profiles | OPS: delete, eq ===
+.from("profiles")
+.delete()
+.eq("id", user.id);
