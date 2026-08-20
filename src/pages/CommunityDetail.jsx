@@ -54,13 +54,20 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
   const [trimming, setTrimming] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [photoCameraOpen, setPhotoCameraOpen] = useState(false);
+  const [photoCameraReady, setPhotoCameraReady] = useState(false);
+  const [photoFacingMode, setPhotoFacingMode] = useState("environment");
   const [videoCameraOpen, setVideoCameraOpen] = useState(false);
   const [videoCameraReady, setVideoCameraReady] = useState(false);
+  const [videoFacingMode, setVideoFacingMode] = useState("environment");
   const [videoRecording, setVideoRecording] = useState(false);
 
   const galleryInputRef = useRef(null);
   const photoCameraInputRef = useRef(null);
+  const videoCameraInputRef = useRef(null);
   const videoRef = useRef(null);
+  const photoCameraPreviewRef = useRef(null);
+  const photoCameraStreamRef = useRef(null);
   const cameraPreviewRef = useRef(null);
   const cameraStreamRef = useRef(null);
   const cameraRecorderRef = useRef(null);
@@ -114,12 +121,13 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
   useEffect(() => {
     return () => {
-      if (cameraRecorderRef.current && cameraRecorderRef.current.state !== "inactive") {
-        try {
-          cameraRecorderRef.current.stop();
-        } catch {}
+      if (photoCameraStreamRef.current) {
+        photoCameraStreamRef.current.getTracks().forEach((track) => track.stop());
+        photoCameraStreamRef.current = null;
       }
-
+      if (cameraRecorderRef.current && cameraRecorderRef.current.state !== "inactive") {
+        try { cameraRecorderRef.current.stop(); } catch {}
+      }
       if (cameraStreamRef.current) {
         cameraStreamRef.current.getTracks().forEach((track) => track.stop());
         cameraStreamRef.current = null;
@@ -245,19 +253,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
       if (error) throw error;
 
-      const postsWithMedia = await Promise.all(
-        (data || []).map(async (post) => {
-          try {
-            const postMedia = await MediaService.getPostMedia(post.id);
-            return { ...post, post_media: postMedia };
-          } catch (mediaError) {
-            console.error("Unable to load post media:", mediaError);
-            return { ...post, post_media: [] };
-          }
-        })
-      );
-
-      setPosts(postsWithMedia);
+      setPosts(data || []);
     } catch (error) {
       console.error(error);
       setPosts([]);
@@ -288,7 +284,118 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     resetVideoSelection();
   }
 
-  async function openVideoCamera() {
+  function stopPhotoCamera() {
+    if (photoCameraStreamRef.current) {
+      photoCameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      photoCameraStreamRef.current = null;
+    }
+
+    if (photoCameraPreviewRef.current) {
+      photoCameraPreviewRef.current.srcObject = null;
+    }
+
+    setPhotoCameraReady(false);
+    setPhotoCameraOpen(false);
+  }
+
+  async function openPhotoCamera(facingMode = photoFacingMode) {
+    if (posting || trimming) return;
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert("This browser does not support in-page camera access. Please use the latest version of Chrome.");
+      return;
+    }
+
+    try {
+      if (photoCameraStreamRef.current) {
+        photoCameraStreamRef.current.getTracks().forEach((track) => track.stop());
+        photoCameraStreamRef.current = null;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: facingMode } },
+        audio: false,
+      });
+
+      photoCameraStreamRef.current = stream;
+      setPhotoFacingMode(facingMode);
+      setPhotoCameraOpen(true);
+      setPhotoCameraReady(false);
+
+      window.requestAnimationFrame(() => {
+        if (!photoCameraPreviewRef.current) return;
+
+        photoCameraPreviewRef.current.srcObject = stream;
+        photoCameraPreviewRef.current
+          .play()
+          .then(() => setPhotoCameraReady(true))
+          .catch(() => setPhotoCameraReady(true));
+      });
+    } catch (error) {
+      console.error("Unable to open photo camera:", error);
+      stopPhotoCamera();
+      alert(error.message || "Unable to access the camera.");
+    }
+  }
+
+  async function switchPhotoCamera() {
+    const nextFacingMode =
+      photoFacingMode === "environment" ? "user" : "environment";
+    await openPhotoCamera(nextFacingMode);
+  }
+
+  function capturePhoto() {
+    const video = photoCameraPreviewRef.current;
+
+    if (!video || !photoCameraStreamRef.current || !photoCameraReady) {
+      return;
+    }
+
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (!width || !height) {
+      alert("The camera is not ready yet. Please try again.");
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      alert("Unable to capture the photo.");
+      return;
+    }
+
+    context.drawImage(video, 0, 0, width, height);
+
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        alert("Unable to create the captured photo.");
+        return;
+      }
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      const file = new File(
+        [blob],
+        `21st-social-photo-${Date.now()}.jpg`,
+        { type: "image/jpeg" }
+      );
+
+      setMediaFile(file);
+      setMediaType("image");
+      setPreviewUrl(URL.createObjectURL(file));
+      resetVideoSelection();
+      stopPhotoCamera();
+    }, "image/jpeg", 0.92);
+  }
+
+  async function openVideoCamera(facingMode = videoFacingMode) {
     if (posting || trimming || videoRecording) return;
 
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
@@ -302,17 +409,17 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
+        video: { facingMode: { ideal: facingMode } },
         audio: true,
       });
 
       cameraStreamRef.current = stream;
+      setVideoFacingMode(facingMode);
       setVideoCameraOpen(true);
       setVideoCameraReady(false);
 
       window.requestAnimationFrame(() => {
         if (!cameraPreviewRef.current) return;
-
         cameraPreviewRef.current.srcObject = stream;
         cameraPreviewRef.current
           .play()
@@ -330,22 +437,24 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     }
   }
 
+  async function switchVideoCamera() {
+    if (posting || trimming || videoRecording || !videoCameraOpen) return;
+
+    const nextFacingMode =
+      videoFacingMode === "environment" ? "user" : "environment";
+
+    await openVideoCamera(nextFacingMode);
+  }
+
   function stopVideoCamera() {
     if (cameraRecorderRef.current && cameraRecorderRef.current.state !== "inactive") {
-      try {
-        cameraRecorderRef.current.stop();
-      } catch {}
+      try { cameraRecorderRef.current.stop(); } catch {}
     }
-
     if (cameraStreamRef.current) {
       cameraStreamRef.current.getTracks().forEach((track) => track.stop());
       cameraStreamRef.current = null;
     }
-
-    if (cameraPreviewRef.current) {
-      cameraPreviewRef.current.srcObject = null;
-    }
-
+    if (cameraPreviewRef.current) cameraPreviewRef.current.srcObject = null;
     cameraRecorderRef.current = null;
     cameraChunksRef.current = [];
     setVideoRecording(false);
@@ -358,17 +467,14 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       alert("Stop the recording before closing the camera.");
       return;
     }
-
     stopVideoCamera();
   }
 
   function startVideoRecording() {
     const stream = cameraStreamRef.current;
-
     if (!stream || !window.MediaRecorder) return;
 
     const mimeType = getRecordingMimeType();
-
     if (!mimeType) {
       alert("This browser cannot record video in a supported format.");
       return;
@@ -377,14 +483,11 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     try {
       cameraChunksRef.current = [];
       cameraRecordingStartedAtRef.current = performance.now();
-
       const recorder = new MediaRecorder(stream, { mimeType });
       cameraRecorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          cameraChunksRef.current.push(event.data);
-        }
+        if (event.data && event.data.size > 0) cameraChunksRef.current.push(event.data);
       };
 
       recorder.onerror = (event) => {
@@ -398,9 +501,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
           (performance.now() - cameraRecordingStartedAtRef.current) / 1000
         );
         cameraRecordingStartedAtRef.current = 0;
-
-        const chunks = cameraChunksRef.current;
-        const blob = new Blob(chunks, { type: mimeType });
+        const blob = new Blob(cameraChunksRef.current, { type: mimeType });
 
         if (!blob.size) {
           setVideoRecording(false);
@@ -409,15 +510,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
         }
 
         const extension = mimeType.includes("mp4") ? "mp4" : "webm";
-        const file = new File(
-          [blob],
-          `21st-social-camera-${Date.now()}.${extension}`,
-          { type: mimeType }
-        );
-
-        // Android Chrome can return a freshly-recorded MediaRecorder file
-        // with missing/zero duration metadata. Keep the real elapsed
-        // recording time so the preview/trim/publish flow can continue.
+        const file = new File([blob], `21st-social-camera-${Date.now()}.${extension}`, { type: mimeType });
         cameraRecordedFileRef.current = file;
         cameraRecordedDurationRef.current = elapsedSeconds;
 
@@ -442,15 +535,15 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
   function stopVideoRecording() {
     const recorder = cameraRecorderRef.current;
-
     if (!recorder || recorder.state === "inactive") return;
-
     setVideoRecording(false);
     recorder.stop();
   }
 
-  function prepareSelectedMedia(file) {
-    if (!file) return false;
+  function handleMediaChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
 
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -465,76 +558,35 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       setMediaFile(file);
       setMediaType("image");
       setPreviewUrl(URL.createObjectURL(file));
-      return true;
-    }
-
-    if (file.type.startsWith("video/")) {
+    } else if (file.type.startsWith("video/")) {
       setMediaFile(file);
       setMediaType("video");
       setPreviewUrl(URL.createObjectURL(file));
-      return true;
+    } else {
+      alert("Please select a valid image or video file.");
     }
 
-    alert("Please select a valid image or video file.");
-    return false;
-  }
-
-  function handleMediaChange(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    prepareSelectedMedia(file);
-
-    // Clear the gallery input only after the selected File has been handed
-    // to React state. This keeps gallery behavior unchanged.
     event.target.value = "";
   }
 
-  async function handlePhotoCameraChange(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    try {
-      // Android camera capture can hand Chrome a temporary file-backed Blob.
-      // Materialize a private File copy before clearing the capture input so
-      // accepting the photo cannot discard the selected image.
-      const buffer = await file.arrayBuffer();
-      const mimeType = file.type || "image/jpeg";
-      const fileName = file.name || `21st-social-camera-${Date.now()}.jpg`;
-      const cameraPhoto = new File([buffer], fileName, {
-        type: mimeType,
-        lastModified: Date.now(),
-      });
-
-      prepareSelectedMedia(cameraPhoto);
-    } catch (error) {
-      console.error("Unable to prepare captured photo:", error);
-      alert("The photo could not be loaded. Please try taking the photo again.");
-    } finally {
-      // Reset only this photo-capture input so the same camera can be used
-      // again. No video input/recording state is touched here.
-      event.target.value = "";
-    }
-  }
-
   function handleVideoMetadata(event) {
-    const duration = event.currentTarget.duration;
-    const fallbackDuration =
+    const metadataDuration = event.currentTarget.duration;
+
+    // Android/Chrome can expose a freshly-recorded MediaRecorder blob with
+    // missing or zero duration metadata even though the recording itself is
+    // valid. We captured the real elapsed time when recording stopped, so use
+    // that value for camera recordings instead of rejecting the video.
+    const recordedDuration =
       mediaFile === cameraRecordedFileRef.current
         ? cameraRecordedDurationRef.current
         : 0;
 
-    if (!Number.isFinite(duration) || duration <= 0) {
-      if (fallbackDuration > 0) {
-        setVideoLength(fallbackDuration);
-        setTrimStart(0);
-        setTrimEnd(Math.min(fallbackDuration, videoDuration));
-        setTrimPreviewTime(0);
-        return;
-      }
+    const duration =
+      Number.isFinite(metadataDuration) && metadataDuration > 0
+        ? metadataDuration
+        : recordedDuration;
 
+    if (!Number.isFinite(duration) || duration <= 0) {
       alert(
         "We couldn't read the duration of this video. Please try another video."
       );
@@ -658,48 +710,20 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       const video = document.createElement("video");
       const temporaryUrl = URL.createObjectURL(file);
 
-      const cleanup = () => {
-        URL.revokeObjectURL(temporaryUrl);
-        video.removeAttribute("src");
-        video.load();
-      };
-
       video.preload = "metadata";
 
       video.onloadedmetadata = () => {
-        const duration = video.duration;
-
-        if (Number.isFinite(duration) && duration > 0) {
-          cleanup();
-          resolve(duration);
-          return;
-        }
-
-        if (fallbackDuration > 0) {
-          cleanup();
-          resolve(fallbackDuration);
-          return;
-        }
-
-        cleanup();
-        reject(
-          new Error(
-            "We couldn't read the duration of this video. Please try another video."
-          )
-        );
+        URL.revokeObjectURL(temporaryUrl);
+        resolve(video.duration);
       };
 
       video.onerror = () => {
-        cleanup();
+        URL.revokeObjectURL(temporaryUrl);
         if (fallbackDuration > 0) {
           resolve(fallbackDuration);
           return;
         }
-        reject(
-          new Error(
-            "We couldn't read the duration of this video. Please try another video."
-          )
-        );
+        reject(new Error("We couldn't read the duration of this video. Please try another video."));
       };
 
       video.src = temporaryUrl;
@@ -859,10 +883,15 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
           mediaFile === cameraRecordedFileRef.current
             ? cameraRecordedDurationRef.current
             : 0;
-        const actualDuration = await getVideoDuration(
-          mediaFile,
-          recordedDuration
-        );
+
+        let actualDuration = recordedDuration;
+
+        // For camera recordings, the real elapsed recording time is the
+        // authoritative duration on Android. Only read container metadata for
+        // gallery/imported videos or when no recorded duration is available.
+        if (actualDuration <= 0) {
+          actualDuration = await getVideoDuration(mediaFile, 0);
+        }
 
         if (trimEnd <= trimStart) {
           throw new Error(
@@ -882,24 +911,22 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
         const effectiveEnd = Math.min(trimEnd, actualDuration);
         const selectedRange = Math.max(0, effectiveEnd - trimStart);
-
-        // Camera recordings that are already within the selected duration
-        // do not need to be re-encoded. Re-encoding through captureStream()
-        // can force a page reload/crash on some Android browsers.
         const isAlreadyValidClip =
           trimStart <= 0.05 &&
           Math.abs(effectiveEnd - actualDuration) <= 0.1 &&
           selectedRange <= videoDuration + 0.05;
 
+        // Camera recordings should be uploaded directly when the full recording
+        // is selected. Re-encoding them through captureStream() can cause an
+        // Android browser page reload. Gallery videos still use the existing
+        // trimming path when a shorter range is selected.
         if (!isAlreadyValidClip) {
           setTrimming(true);
-
           fileToUpload = await createTrimmedVideo(
             mediaFile,
             trimStart,
             effectiveEnd
           );
-
           setTrimming(false);
         }
       }
@@ -922,15 +949,14 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
           user_id: user.id,
           post_type: postType,
           text_content: postText.trim() || null,
-          // Community media uses community_posts.video_url for both
-          // images and videos. This keeps community publishing out of
-          // post_media, whose RLS policy is for regular feed posts.
           video_url: uploadedMediaUrl || null,
         })
         .select()
         .single();
 
-      if (postError) throw postError;
+      if (postError) {
+        throw postError;
+      }
 
       clearSelectedMedia();
       setPostText("");
@@ -1220,10 +1246,11 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
               type="file"
               accept="image/*"
               capture="environment"
-              onChange={handlePhotoCameraChange}
+              onChange={handleMediaChange}
               disabled={posting || trimming}
               style={{ display: "none" }}
             />
+
 
             <div
               style={{
@@ -1243,12 +1270,10 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
               <button
                 type="button"
-                onClick={() =>
-                  photoCameraInputRef.current?.click()
-                }
-                disabled={posting || trimming}
+                onClick={() => openPhotoCamera("environment")}
+                disabled={posting || trimming || photoCameraOpen}
               >
-                📷 Take Photo
+                📷 Add Photo / Camera
               </button>
 
               <button
@@ -1270,6 +1295,69 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
               )}
             </div>
 
+            {photoCameraOpen && (
+              <div
+                style={{
+                  marginTop: "16px",
+                  padding: "16px",
+                  borderRadius: "14px",
+                  background: "#111",
+                  border: "1px solid #333",
+                }}
+              >
+                <h4 style={{ marginTop: 0 }}>Take Photo</h4>
+
+                <video
+                  ref={photoCameraPreviewRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{
+                    width: "100%",
+                    maxWidth: "500px",
+                    borderRadius: "12px",
+                    display: "block",
+                    background: "#000",
+                    transform:
+                      photoFacingMode === "user" ? "scaleX(-1)" : "none",
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    flexWrap: "wrap",
+                    marginTop: "12px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    disabled={!photoCameraReady || posting || trimming}
+                  >
+                    📸 Capture Photo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={switchPhotoCamera}
+                    disabled={!photoCameraReady || posting || trimming}
+                  >
+                    🔄 Switch Camera
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={stopPhotoCamera}
+                    disabled={posting || trimming}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {videoCameraOpen && (
               <div
                 style={{
@@ -1281,7 +1369,6 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                 }}
               >
                 <h4 style={{ marginTop: 0 }}>Record Video</h4>
-
                 <video
                   ref={cameraPreviewRef}
                   autoPlay
@@ -1295,7 +1382,6 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                     background: "#000",
                   }}
                 />
-
                 <div
                   style={{
                     display: "flex",
@@ -1321,7 +1407,13 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                       ⏹️ Stop Recording
                     </button>
                   )}
-
+                  <button
+                    type="button"
+                    onClick={switchVideoCamera}
+                    disabled={videoRecording || !videoCameraReady || posting || trimming}
+                  >
+                    🔄 Switch Camera
+                  </button>
                   <button
                     type="button"
                     onClick={cancelVideoCamera}
@@ -1703,6 +1795,20 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                         </p>
                       )}
 
+                      {post.video_url && post.post_type === "image" && (
+                        <img
+                          src={post.video_url}
+                          alt="Community post media"
+                          style={{
+                            width: "100%",
+                            maxHeight: "500px",
+                            objectFit: "cover",
+                            borderRadius: "12px",
+                            marginTop: "14px",
+                          }}
+                        />
+                      )}
+
                       {post.video_url && post.post_type === "video" && (
                         <video
                           src={post.video_url}
@@ -1713,58 +1819,8 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                             maxHeight: "500px",
                             borderRadius: "12px",
                             marginTop: "14px",
-                            marginBottom: "10px",
                           }}
                         />
-                      )}
-
-                      {post.video_url && post.post_type === "image" && (
-                        <img
-                          src={post.video_url}
-                          alt="Community post"
-                          style={{
-                            width: "100%",
-                            maxHeight: "500px",
-                            objectFit: "cover",
-                            borderRadius: "12px",
-                            marginTop: "14px",
-                            marginBottom: "10px",
-                          }}
-                        />
-                      )}
-
-                      {post.post_media?.length > 0 && (
-                        <div style={{ marginTop: "14px" }}>
-                          {post.post_media.map((media) =>
-                            media.media_type === "video" ? (
-                              <video
-                                key={media.id}
-                                src={media.media_url}
-                                controls
-                                playsInline
-                                style={{
-                                  width: "100%",
-                                  maxHeight: "500px",
-                                  borderRadius: "12px",
-                                  marginBottom: "10px",
-                                }}
-                              />
-                            ) : (
-                              <img
-                                key={media.id}
-                                src={media.media_url}
-                                alt="Community post media"
-                                style={{
-                                  width: "100%",
-                                  maxHeight: "500px",
-                                  objectFit: "cover",
-                                  borderRadius: "12px",
-                                  marginBottom: "10px",
-                                }}
-                              />
-                            )
-                          )}
-                        </div>
                       )}
 
                       {post.created_at && (
