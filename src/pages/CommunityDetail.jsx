@@ -449,10 +449,8 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     recorder.stop();
   }
 
-  function handleMediaChange(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
+  function prepareSelectedMedia(file) {
+    if (!file) return false;
 
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -467,15 +465,58 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       setMediaFile(file);
       setMediaType("image");
       setPreviewUrl(URL.createObjectURL(file));
-    } else if (file.type.startsWith("video/")) {
+      return true;
+    }
+
+    if (file.type.startsWith("video/")) {
       setMediaFile(file);
       setMediaType("video");
       setPreviewUrl(URL.createObjectURL(file));
-    } else {
-      alert("Please select a valid image or video file.");
+      return true;
     }
 
+    alert("Please select a valid image or video file.");
+    return false;
+  }
+
+  function handleMediaChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    prepareSelectedMedia(file);
+
+    // Clear the gallery input only after the selected File has been handed
+    // to React state. This keeps gallery behavior unchanged.
     event.target.value = "";
+  }
+
+  async function handlePhotoCameraChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    try {
+      // Android camera capture can hand Chrome a temporary file-backed Blob.
+      // Materialize a private File copy before clearing the capture input so
+      // accepting the photo cannot discard the selected image.
+      const buffer = await file.arrayBuffer();
+      const mimeType = file.type || "image/jpeg";
+      const fileName = file.name || `21st-social-camera-${Date.now()}.jpg`;
+      const cameraPhoto = new File([buffer], fileName, {
+        type: mimeType,
+        lastModified: Date.now(),
+      });
+
+      prepareSelectedMedia(cameraPhoto);
+    } catch (error) {
+      console.error("Unable to prepare captured photo:", error);
+      alert("The photo could not be loaded. Please try taking the photo again.");
+    } finally {
+      // Reset only this photo-capture input so the same camera can be used
+      // again. No video input/recording state is touched here.
+      event.target.value = "";
+    }
   }
 
   function handleVideoMetadata(event) {
@@ -881,27 +922,15 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
           user_id: user.id,
           post_type: postType,
           text_content: postText.trim() || null,
-          // Videos belong directly on community_posts.video_url.
-          // Do not create a post_media row for recorded videos because the
-          // current Supabase RLS contract does not authorize that insert.
-          video_url: mediaType === "video" ? uploadedMediaUrl : null,
+          // Community media uses community_posts.video_url for both
+          // images and videos. This keeps community publishing out of
+          // post_media, whose RLS policy is for regular feed posts.
+          video_url: uploadedMediaUrl || null,
         })
         .select()
         .single();
 
       if (postError) throw postError;
-
-      // Keep the existing post_media path for images. Recorded videos use
-      // community_posts.video_url above and must not be inserted into
-      // post_media under the current Supabase RLS policies.
-      if (uploadedMediaUrl && mediaType !== "video") {
-        await MediaService.attachMedia({
-          postId: post.id,
-          mediaUrl: uploadedMediaUrl,
-          mediaType,
-          sortOrder: 0,
-        });
-      }
 
       clearSelectedMedia();
       setPostText("");
@@ -1191,7 +1220,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
               type="file"
               accept="image/*"
               capture="environment"
-              onChange={handleMediaChange}
+              onChange={handlePhotoCameraChange}
               disabled={posting || trimming}
               style={{ display: "none" }}
             />
@@ -1674,7 +1703,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                         </p>
                       )}
 
-                      {post.video_url && (
+                      {post.video_url && post.post_type === "video" && (
                         <video
                           src={post.video_url}
                           controls
@@ -1682,6 +1711,21 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                           style={{
                             width: "100%",
                             maxHeight: "500px",
+                            borderRadius: "12px",
+                            marginTop: "14px",
+                            marginBottom: "10px",
+                          }}
+                        />
+                      )}
+
+                      {post.video_url && post.post_type === "image" && (
+                        <img
+                          src={post.video_url}
+                          alt="Community post"
+                          style={{
+                            width: "100%",
+                            maxHeight: "500px",
+                            objectFit: "cover",
                             borderRadius: "12px",
                             marginTop: "14px",
                             marginBottom: "10px",
