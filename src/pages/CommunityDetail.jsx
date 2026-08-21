@@ -646,6 +646,49 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     );
   }
 
+  function handleTrimPointerDown(event, handle) {
+    if (posting || trimming || !videoLength) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {}
+
+    updateTrimFromPointer(event, handle);
+  }
+
+  function updateTrimFromPointer(event, handle) {
+    const track = event.currentTarget?.parentElement;
+
+    if (!track || !videoLength) return;
+
+    const rect = track.getBoundingClientRect();
+    if (!rect.width) return;
+
+    const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+    const nextTime = ratio * videoLength;
+
+    if (handle === "start") {
+      updateTrimStart(nextTime);
+    } else {
+      updateTrimEnd(nextTime);
+    }
+  }
+
+  function handleTrimPointerMove(event, handle) {
+    if (event.buttons === 0 && event.pointerType !== "touch") return;
+    event.preventDefault();
+    updateTrimFromPointer(event, handle);
+  }
+
+  function handleTrimPointerUp(event) {
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {}
+  }
+
   function seekTrimPreview(time) {
     const video = videoRef.current;
 
@@ -1561,53 +1604,30 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                     }}
                   />
 
-                  <input
-                    type="range"
-                    min="0"
-                    max={videoLength}
-                    step="0.01"
-                    value={trimStart}
-                    onChange={(event) =>
-                      updateTrimStart(event.target.value)
-                    }
-                    disabled={posting || trimming}
-                    aria-label="Video trim start"
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      top: "12px",
-                      width: "100%",
-                      pointerEvents: "none",
-                      background: "transparent",
-                      zIndex: 3,
-                    }}
-                  />
-
-                  <input
-                    type="range"
-                    min="0"
-                    max={videoLength}
-                    step="0.01"
-                    value={trimEnd}
-                    onChange={(event) =>
-                      updateTrimEnd(event.target.value)
-                    }
-                    disabled={posting || trimming}
-                    aria-label="Video trim end"
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      top: "12px",
-                      width: "100%",
-                      pointerEvents: "none",
-                      background: "transparent",
-                      zIndex: 4,
-                    }}
-                  />
-
                   <div
+                    role="slider"
+                    tabIndex={posting || trimming ? -1 : 0}
+                    aria-label="Video trim start"
+                    aria-valuemin={0}
+                    aria-valuemax={videoLength}
+                    aria-valuenow={trimStart}
+                    onPointerDown={(event) =>
+                      handleTrimPointerDown(event, "start")
+                    }
+                    onPointerMove={(event) =>
+                      handleTrimPointerMove(event, "start")
+                    }
+                    onPointerUp={handleTrimPointerUp}
+                    onKeyDown={(event) => {
+                      if (posting || trimming) return;
+                      if (event.key === "ArrowLeft") {
+                        event.preventDefault();
+                        updateTrimStart(trimStart - 0.1);
+                      } else if (event.key === "ArrowRight") {
+                        event.preventDefault();
+                        updateTrimStart(trimStart + 0.1);
+                      }
+                    }}
                     style={{
                       position: "absolute",
                       left: `${
@@ -1615,18 +1635,46 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                           ? (trimStart / videoLength) * 100
                           : 0
                       }%`,
-                      top: "13px",
-                      width: "22px",
-                      height: "32px",
+                      top: "10px",
+                      width: "30px",
+                      height: "38px",
                       transform: "translateX(-50%)",
                       borderRadius: "8px",
                       background: "#fff",
-                      border: "2px solid #4fc3f7",
-                      pointerEvents: "none",
+                      border: "3px solid #4fc3f7",
+                      boxSizing: "border-box",
+                      cursor: posting || trimming ? "default" : "ew-resize",
+                      touchAction: "none",
+                      userSelect: "none",
+                      zIndex: 5,
+                      opacity: posting || trimming ? 0.6 : 1,
                     }}
                   />
 
                   <div
+                    role="slider"
+                    tabIndex={posting || trimming ? -1 : 0}
+                    aria-label="Video trim end"
+                    aria-valuemin={0}
+                    aria-valuemax={videoLength}
+                    aria-valuenow={trimEnd}
+                    onPointerDown={(event) =>
+                      handleTrimPointerDown(event, "end")
+                    }
+                    onPointerMove={(event) =>
+                      handleTrimPointerMove(event, "end")
+                    }
+                    onPointerUp={handleTrimPointerUp}
+                    onKeyDown={(event) => {
+                      if (posting || trimming) return;
+                      if (event.key === "ArrowLeft") {
+                        event.preventDefault();
+                        updateTrimEnd(trimEnd - 0.1);
+                      } else if (event.key === "ArrowRight") {
+                        event.preventDefault();
+                        updateTrimEnd(trimEnd + 0.1);
+                      }
+                    }}
                     style={{
                       position: "absolute",
                       left: `${
@@ -1634,14 +1682,19 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
                           ? (trimEnd / videoLength) * 100
                           : 0
                       }%`,
-                      top: "13px",
-                      width: "22px",
-                      height: "32px",
+                      top: "10px",
+                      width: "30px",
+                      height: "38px",
                       transform: "translateX(-50%)",
                       borderRadius: "8px",
                       background: "#fff",
-                      border: "2px solid #4fc3f7",
-                      pointerEvents: "none",
+                      border: "3px solid #4fc3f7",
+                      boxSizing: "border-box",
+                      cursor: posting || trimming ? "default" : "ew-resize",
+                      touchAction: "none",
+                      userSelect: "none",
+                      zIndex: 6,
+                      opacity: posting || trimming ? 0.6 : 1,
                     }}
                   />
                 </div>
