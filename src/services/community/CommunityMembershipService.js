@@ -1,104 +1,216 @@
 import supabase from "../../lib/supabase";
 
 const CommunityMembershipService = {
+  // =========================
+  // MEMBERSHIP
+  // =========================
+
   async getCurrentUser() {
-      const {
-            data: { user },
-                } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-                    return user;
-                      },
+    return user;
+  },
 
-                        async isMember(communityId) {
-                            const user = await this.getCurrentUser();
+  async isMember(communityId) {
+    const user = await this.getCurrentUser();
 
-                                if (!user) return false;
+    if (!user) return false;
 
-                                    const { data } = await supabase
-                                          .from("community_members")
-                                                .select("id")
-                                                      .eq("community_id", communityId)
-                                                            .eq("user_id", user.id)
-                                                                  .maybeSingle();
+    const { data } = await supabase
+      .from("community_members")
+      .select("id")
+      .eq("community_id", communityId)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-                                                                      return !!data;
-                                                                        },
+    return !!data;
+  },
 
-                                                                          async join(communityId) {
-                                                                                const user = await this.getCurrentUser();
+  async join(communityId) {
+    const user = await this.getCurrentUser();
 
-                                                                                    if (!user) throw new Error("Please sign in first.");
+    if (!user) throw new Error("Please sign in first.");
 
-                                                                                        // Add membership
-                                                                                            const { error } = await supabase
-                                                                                                    .from("community_members")
-                                                                                                            .insert({
-                                                                                                                        community_id: communityId,
-                                                                                                                                    user_id: user.id,
-                                                                                                                                                role: "member",
-                                                                                                                                                            status: "joined",
-                                                                                                                                                                    });
+    const { error } = await supabase
+      .from("community_members")
+      .insert({
+        community_id: communityId,
+        user_id: user.id,
+        role: "member",
+        status: "joined",
+      });
 
-                                                                                                                                                                        if (error) throw error;
+    if (error) throw error;
 
-                                                                                                                                                                            // Read current member count
-                                                                                                                                                                                const { data: community } = await supabase
-                                                                                                                                                                                        .from("communities")
-                                                                                                                                                                                                .select("member_count")
-                                                                                                                                                                                                        .eq("id", communityId)
-                                                                                                                                                                                                                .single();
+    const { data: community } = await supabase
+      .from("communities")
+      .select("member_count")
+      .eq("id", communityId)
+      .single();
 
-                                                                                                                                                                                                                    // Increment count
-                                                                                                                                                                                                                        await supabase
-                                                                                                                                                                                                                                .from("communities")
-                                                                                                                                                                                                                                        .update({
-                                                                                                                                                                                                                                                    member_count: (community.member_count ?? 0) + 1,
-                                                                                                                                                                                                                                                            })
-                                                                                                                                                                                                                                                                    .eq("id", communityId);
-                                                                                                                                                                                                                                                                    },
-                                                                                                                                                                                                                                                                  
+    await supabase
+      .from("communities")
+      .update({
+        member_count: (community.member_count ?? 0) + 1,
+      })
+      .eq("id", communityId);
+  },
 
-                                                                                                                      async leave(communityId) {
-                                                                                                                            const user = await this.getCurrentUser();
+  async leave(communityId) {
+    const user = await this.getCurrentUser();
 
-                                                                                                                                if (!user) throw new Error("Please sign in first.");
+    if (!user) throw new Error("Please sign in first.");
 
-                                                                                                                                    // Remove membership
-                                                                                                                                        const { error } = await supabase
-                                                                                                                                                .from("community_members")
-                                                                                                                                                        .delete()
-                                                                                                                                                                .eq("community_id", communityId)
-                                                                                                                                                                        .eq("user_id", user.id);
+    const { error } = await supabase
+      .from("community_members")
+      .delete()
+      .eq("community_id", communityId)
+      .eq("user_id", user.id);
 
-                                                                                                                                                                            if (error) throw error;
+    if (error) throw error;
 
-                                                                                                                                                                                // Read current member count
-                                                                                                                                                                                    const { data: community } = await supabase
-                                                                                                                                                                                            .from("communities")
-                                                                                                                                                                                                    .select("member_count")
-                                                                                                                                                                                                            .eq("id", communityId)
-                                                                                                                                                                                                                    .single();
+    const { data: community } = await supabase
+      .from("communities")
+      .select("member_count")
+      .eq("id", communityId)
+      .single();
 
-                                                                                                                                                                                                                        // Decrement count (never below zero)
-                                                                                                                                                                                                                            await supabase
-                                                                                                                                                                                                                                    .from("communities")
-                                                                                                                                                                                                                                            .update({
-                                                                                                                                                                                                                                                        member_count: Math.max((community.member_count ?? 1) - 1, 0),
-                                                                                                                                                                                                                                                                })
-                                                                                                                                                                                                                                                                        .eq("id", communityId);
-                                                                                                                                                                                                                                                                        },
-                                                                                                                      
+    await supabase
+      .from("communities")
+      .update({
+        member_count: Math.max((community.member_count ?? 1) - 1, 0),
+      })
+      .eq("id", communityId);
+  },
 
-                                                                                                                                                              async toggle(communityId) {
-                                                                                                                                                                  const joined = await this.isMember(communityId);
+  async toggle(communityId) {
+    const joined = await this.isMember(communityId);
 
-                                                                                                                                                                    if (joined) {
-                                                                                                                                                                        return this.leave(communityId);
-                                                                                                                                                                          }
+    if (joined) {
+      return this.leave(communityId);
+    }
 
-                                                                                                                                                                            return this.join(communityId);
-                                                                                                                                                                            },
-                                                                                                                                                              }
-                                                                                                                                                              
+    return this.join(communityId);
+  },
 
-                                                                                                                                                                                      export default CommunityMembershipService;
+  // =========================
+  // COMMUNITY ROLES
+  // =========================
+
+  async getCommunityRoles(communityId) {
+    const { data, error } = await supabase
+      .from("community_roles")
+      .select("*")
+      .eq("community_id", communityId)
+      .order("name", { ascending: true });
+
+    if (error) throw error;
+
+    return data ?? [];
+  },
+
+  async getMemberRoles(memberId) {
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from("community_member_roles")
+      .select("role_id")
+      .eq("member_id", memberId);
+
+    if (assignmentsError) throw assignmentsError;
+
+    const roleIds = (assignments ?? [])
+      .map((assignment) => assignment.role_id)
+      .filter(Boolean);
+
+    if (roleIds.length === 0) return [];
+
+    const { data: roles, error: rolesError } = await supabase
+      .from("community_roles")
+      .select("*")
+      .in("id", roleIds)
+      .order("name", { ascending: true });
+
+    if (rolesError) throw rolesError;
+
+    return roles ?? [];
+  },
+
+  async hasRole(memberId, roleId) {
+    const { data, error } = await supabase
+      .from("community_member_roles")
+      .select("id")
+      .eq("member_id", memberId)
+      .eq("role_id", roleId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return !!data;
+  },
+
+  async assignRole(memberId, roleId) {
+    const user = await this.getCurrentUser();
+
+    if (!user) throw new Error("Please sign in first.");
+
+    const { data: member, error: memberError } = await supabase
+      .from("community_members")
+      .select("id, community_id")
+      .eq("id", memberId)
+      .single();
+
+    if (memberError) throw memberError;
+
+    const { data: role, error: roleError } = await supabase
+      .from("community_roles")
+      .select("id, community_id")
+      .eq("id", roleId)
+      .single();
+
+    if (roleError) throw roleError;
+
+    if (member.community_id !== role.community_id) {
+      throw new Error("This role does not belong to the member's community.");
+    }
+
+    const alreadyAssigned = await this.hasRole(memberId, roleId);
+
+    if (alreadyAssigned) {
+      return {
+        alreadyAssigned: true,
+        memberId,
+        roleId,
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("community_member_roles")
+      .insert({
+        community_id: member.community_id,
+        member_id: memberId,
+        role_id: roleId,
+        assigned_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data;
+  },
+
+  async removeRole(memberId, roleId) {
+    const { error } = await supabase
+      .from("community_member_roles")
+      .delete()
+      .eq("member_id", memberId)
+      .eq("role_id", roleId);
+
+    if (error) throw error;
+
+    return true;
+  },
+};
+
+export default CommunityMembershipService;
