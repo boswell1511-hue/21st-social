@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import supabase from "../lib/supabase";
 import MediaService from "../services/posts/MediaService";
+import CommunityRoleManager from "../components/CommunityRoleManager";
 
 const VIDEO_DURATION_OPTIONS = [
   { label: "15 Seconds", seconds: 15 },
@@ -41,6 +42,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
   );
   const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState("");
 
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaType, setMediaType] = useState("");
@@ -141,10 +143,13 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     } = await supabase.auth.getUser();
 
     if (!user) {
+      setCurrentUserId("");
       const allowed = community.visibility === "public";
       setHasAccess(allowed);
       return allowed;
     }
+
+    setCurrentUserId(user.id);
 
     if (community.owner_id === user.id) {
       setHasAccess(true);
@@ -1113,6 +1118,11 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       </p>
 
       <hr style={{ margin: "30px 0" }} />
+
+      <CommunityRoleManager
+        communityId={community.id}
+        isOwner={community.owner_id === currentUserId}
+      />
 
       <button
         style={{

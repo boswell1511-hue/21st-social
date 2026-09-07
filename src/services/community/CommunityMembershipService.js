@@ -96,6 +96,43 @@ const CommunityMembershipService = {
   },
 
   // =========================
+  // COMMUNITY MEMBERS
+  // =========================
+
+  async getCommunityMembers(communityId) {
+    const { data: members, error: membersError } = await supabase
+      .from("community_members")
+      .select("id, community_id, user_id, role, status, created_at")
+      .eq("community_id", communityId)
+      .eq("status", "joined")
+      .order("created_at", { ascending: true });
+
+    if (membersError) throw membersError;
+
+    const userIds = (members ?? [])
+      .map((member) => member.user_id)
+      .filter(Boolean);
+
+    if (userIds.length === 0) return [];
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, display_name, username, avatar_url")
+      .in("id", userIds);
+
+    if (profilesError) throw profilesError;
+
+    const profilesById = new Map(
+      (profiles ?? []).map((profile) => [profile.id, profile])
+    );
+
+    return (members ?? []).map((member) => ({
+      ...member,
+      profile: profilesById.get(member.user_id) ?? null,
+    }));
+  },
+
+  // =========================
   // COMMUNITY ROLES
   // =========================
 
