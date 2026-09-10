@@ -137,6 +137,38 @@ const CommunityMembershipService = {
   // COMMUNITY ROLES
   // =========================
 
+  async createRole(
+    communityId,
+    { name, description = "", isModerator = false } = {}
+  ) {
+    const user = await this.getCurrentUser();
+
+    if (!user) throw new Error("Please sign in first.");
+
+    const trimmedName = String(name ?? "").trim();
+
+    if (!trimmedName) {
+      throw new Error("Please enter a role name.");
+    }
+
+    const { data, error } = await supabase
+      .from("community_roles")
+      .insert({
+        community_id: communityId,
+        name: trimmedName,
+        description: String(description ?? "").trim(),
+        is_moderator: !!isModerator,
+        is_system: false,
+        created_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return data;
+  },
+
   async getCommunityRoles(communityId) {
     const { data, error } = await supabase
       .from("community_roles")
