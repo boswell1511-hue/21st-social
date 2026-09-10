@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import supabase from "../lib/supabase";
 import MediaService from "../services/posts/MediaService";
 import CommunityRoleManager from "../components/CommunityRoleManager";
+import CommunityMembershipService from "../services/community/CommunityMembershipService";
 
 const VIDEO_DURATION_OPTIONS = [
   { label: "15 Seconds", seconds: 15 },
@@ -138,9 +139,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
   }, []);
 
   async function checkCommunityAccess() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await CommunityMembershipService.getCurrentUser();
 
     if (!user) {
       setCurrentUserId("");
@@ -161,21 +160,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       return true;
     }
 
-    const { data, error } = await supabase
-      .from("community_members")
-      .select("id")
-      .eq("community_id", community.id)
-      .eq("user_id", user.id)
-      .eq("status", "joined")
-      .maybeSingle();
-
-    if (error) {
-      console.error(error);
-      setHasAccess(false);
-      return false;
-    }
-
-    const allowed = !!data;
+    const allowed = await CommunityMembershipService.isMember(community.id);
     setHasAccess(allowed);
     return allowed;
   }

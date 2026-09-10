@@ -23,6 +23,7 @@ const CommunityMembershipService = {
       .select("id")
       .eq("community_id", communityId)
       .eq("user_id", user.id)
+      .eq("status", "joined")
       .maybeSingle();
 
     return !!data;
