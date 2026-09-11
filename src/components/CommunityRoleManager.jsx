@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import CommunityMembershipService from "../services/community/CommunityMembershipService";
+import CommunityPermissionService from "../services/community/CommunityPermissionService";
 
 function memberLabel(member) {
   const profile = member.profile;
@@ -18,6 +19,9 @@ function CommunityRoleManager({ communityId, isOwner }) {
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [memberRoles, setMemberRoles] = useState([]);
+  const [permissions, setPermissions] = useState([]);
+  const [rolePermissions, setRolePermissions] = useState([]);
+  const [loadingRolePermissions, setLoadingRolePermissions] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
   const [newRoleIsModerator, setNewRoleIsModerator] = useState(false);
@@ -40,16 +44,26 @@ function CommunityRoleManager({ communityId, isOwner }) {
     loadSelectedMemberRoles(selectedMemberId);
   }, [selectedMemberId]);
 
+  useEffect(() => {
+    if (!selectedRoleId) {
+      setRolePermissions([]);
+      return;
+    }
+    loadSelectedRolePermissions(selectedRoleId);
+  }, [selectedRoleId]);
+
   async function loadManagerData() {
     setLoading(true);
     setError("");
     try {
-      const [nextMembers, nextRoles] = await Promise.all([
+      const [nextMembers, nextRoles, nextPermissions] = await Promise.all([
         CommunityMembershipService.getCommunityMembers(communityId),
         CommunityMembershipService.getCommunityRoles(communityId),
+        CommunityPermissionService.getPermissions(),
       ]);
       setMembers(nextMembers);
       setRoles(nextRoles);
+      setPermissions(nextPermissions);
       setSelectedMemberId((current) =>
         current && nextMembers.some((member) => member.id === current)
           ? current
@@ -80,6 +94,69 @@ function CommunityRoleManager({ communityId, isOwner }) {
       setError(loadError.message || "Unable to load member roles.");
     } finally {
       setLoadingMemberRoles(false);
+    }
+  }
+
+  async function loadSelectedRolePermissions(roleId) {
+    setLoadingRolePermissions(true);
+    setError("");
+    try {
+      setRolePermissions(
+        await CommunityPermissionService.getRolePermissions(roleId)
+      );
+    } catch (loadError) {
+      console.error(loadError);
+      setError(loadError.message || "Unable to load role permissions.");
+    } finally {
+      setLoadingRolePermissions(false);
+    }
+  }
+
+  async function togglePermission(permission, enabled) {
+    if (!selectedRoleId || saving) return;
+
+    const selectedRole = roles.find((role) => role.id === selectedRoleId);
+    if (!selectedRole) return;
+
+    if (permission.moderator_only && !selectedRole.is_moderator) {
+      setError("This permission is available only to moderator roles.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      if (enabled) {
+        await CommunityPermissionService.grantPermission(
+          selectedRoleId,
+          permission.id
+        );
+        setRolePermissions((current) =>
+          current.some((item) => item.id === permission.id)
+            ? current
+            : [...current, permission]
+        );
+        setSuccess(`Permission “${permission.name}” granted.`);
+      } else {
+        await CommunityPermissionService.revokePermission(
+          selectedRoleId,
+          permission.id
+        );
+        setRolePermissions((current) =>
+          current.filter((item) => item.id !== permission.id)
+        );
+        setSuccess(`Permission “${permission.name}” revoked.`);
+      }
+    } catch (permissionError) {
+      console.error(permissionError);
+      setError(
+        permissionError.message ||
+          `Unable to ${enabled ? "grant" : "revoke"} this permission.`
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -179,7 +256,7 @@ function CommunityRoleManager({ communityId, isOwner }) {
     }}>
       <h2 style={{ marginTop: 0 }}>Manage Members & Roles</h2>
       <p style={{ opacity: 0.7 }}>
-        Create community roles, then assign them to joined members.
+        Create community roles, assign them to joined members, and configure their permissions.
       </p>
 
       {error && (
@@ -202,7 +279,7 @@ function CommunityRoleManager({ communityId, isOwner }) {
       }}>
         <h3 style={{ marginTop: 0 }}>Create Role</h3>
         <p style={{ opacity: 0.7 }}>
-          Create a named role for this community. Permissions can be configured next.
+          Create a named role for this community. You can configure its permissions below.
         </p>
 
         <label style={{ display: "block", marginTop: "14px", marginBottom: "8px", fontWeight: "bold" }}>
@@ -284,6 +361,75 @@ function CommunityRoleManager({ communityId, isOwner }) {
               </option>
             ))}
           </select>
+
+          <div style={{
+            marginTop: "20px", padding: "16px", borderRadius: "12px",
+            background: "#111", border: "1px solid #333",
+          }}>
+            <h3 style={{ marginTop: 0 }}>Role Permissions</h3>
+            <p style={{ opacity: 0.7 }}>
+              Choose what the selected role can do in this community. Changes save immediately.
+            </p>
+
+            {loadingRolePermissions ? <p>Loading permissions...</p> : permissions.length === 0 ? (
+              <p style={{ opacity: 0.7 }}>No permissions are available.</p>
+            ) : (
+              [...new Set(permissions.map((permission) => permission.category))].map((category) => {
+                const categoryPermissions = permissions.filter(
+                  (permission) => permission.category === category
+                );
+                const selectedRole = roles.find((role) => role.id === selectedRoleId);
+
+                return (
+                  <div key={category} style={{ marginTop: "16px" }}>
+                    <h4 style={{ margin: "0 0 8px", textTransform: "capitalize" }}>
+                      {category}
+                    </h4>
+                    {categoryPermissions.map((permission) => {
+                      const checked = rolePermissions.some(
+                        (item) => item.id === permission.id
+                      );
+                      const disabled =
+                        saving ||
+                        !selectedRoleId ||
+                        (permission.moderator_only && !selectedRole?.is_moderator);
+
+                      return (
+                        <label key={permission.id} style={{
+                          display: "flex", alignItems: "flex-start", gap: "10px",
+                          marginTop: "10px", padding: "10px", borderRadius: "8px",
+                          background: "#18181b", opacity: disabled ? 0.6 : 1,
+                          cursor: disabled ? "default" : "pointer",
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={(event) =>
+                              togglePermission(permission, event.target.checked)
+                            }
+                          />
+                          <span>
+                            <strong>{permission.name}</strong>
+                            {permission.description && (
+                              <span style={{ display: "block", marginTop: "3px", fontSize: "13px", opacity: 0.7 }}>
+                                {permission.description}
+                              </span>
+                            )}
+                            {permission.moderator_only && (
+                              <span style={{ display: "block", marginTop: "3px", fontSize: "12px", opacity: 0.7 }}>
+                                Moderator only
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              })
+            )}
+          </div>
 
           <button type="button" onClick={assignSelectedRole}
             disabled={saving || !selectedMemberId || !selectedRoleId || roles.length === 0}
