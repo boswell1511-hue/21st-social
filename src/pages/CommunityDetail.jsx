@@ -3,6 +3,7 @@ import supabase from "../lib/supabase";
 import MediaService from "../services/posts/MediaService";
 import CommunityRoleManager from "../components/CommunityRoleManager";
 import CommunityMembershipService from "../services/community/CommunityMembershipService";
+import CommunityPermissionService from "../services/community/CommunityPermissionService";
 
 const VIDEO_DURATION_OPTIONS = [
   { label: "15 Seconds", seconds: 15 },
@@ -44,6 +45,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
   const [hasAccess, setHasAccess] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
+  const [canManageSections, setCanManageSections] = useState(false);
 
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaType, setMediaType] = useState("");
@@ -91,15 +93,21 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     async function initializeCommunity() {
       setCheckingAccess(true);
 
-      const accessGranted = await checkCommunityAccess();
+      const { accessGranted, userId } = await checkCommunityAccess();
 
       if (cancelled) return;
 
       if (accessGranted) {
-        await Promise.all([loadCommunity(), loadSections(), loadPosts()]);
+        await Promise.all([
+          loadCommunity(),
+          loadSections(),
+          loadPosts(),
+          loadSectionPermission(userId),
+        ]);
       } else {
         setSections([]);
         setPosts([]);
+        setCanManageSections(false);
       }
 
       if (!cancelled) {
@@ -113,6 +121,24 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       cancelled = true;
     };
   }, [community]);
+
+  async function loadSectionPermission(userId = currentUserId) {
+    if (!community?.id || !userId) {
+      setCanManageSections(false);
+      return;
+    }
+
+    try {
+      const allowed = await CommunityPermissionService.hasPermission(
+        community.id,
+        "manage_sections"
+      );
+      setCanManageSections(allowed);
+    } catch (permissionError) {
+      console.error(permissionError);
+      setCanManageSections(false);
+    }
+  }
 
   useEffect(() => {
     return () => {
@@ -145,24 +171,24 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       setCurrentUserId("");
       const allowed = community.visibility === "public";
       setHasAccess(allowed);
-      return allowed;
+      return { accessGranted: allowed, userId: "" };
     }
 
     setCurrentUserId(user.id);
 
     if (community.owner_id === user.id) {
       setHasAccess(true);
-      return true;
+      return { accessGranted: true, userId: user.id };
     }
 
     if (community.visibility === "public") {
       setHasAccess(true);
-      return true;
+      return { accessGranted: true, userId: user.id };
     }
 
     const allowed = await CommunityMembershipService.isMember(community.id);
     setHasAccess(allowed);
-    return allowed;
+    return { accessGranted: allowed, userId: user.id };
   }
 
   async function loadCommunity() {
@@ -197,6 +223,11 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
   }
 
   async function createSection() {
+    if (!canManageSections) {
+      alert("You do not have permission to manage community sections.");
+      return;
+    }
+
     if (!sectionName.trim()) {
       alert("Please enter a section name.");
       return;
@@ -1109,21 +1140,23 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
         isOwner={community.owner_id === currentUserId}
       />
 
-      <button
-        style={{
-          marginBottom: "20px",
-          padding: "12px 20px",
-          borderRadius: "10px",
-          border: "none",
-          background: "#7c3aed",
-          color: "#fff",
-          cursor: "pointer",
-          fontWeight: "bold",
-        }}
-        onClick={() => setShowCreateSection(true)}
-      >
-        + Create Section
-      </button>
+      {canManageSections && (
+        <button
+          style={{
+            marginBottom: "20px",
+            padding: "12px 20px",
+            borderRadius: "10px",
+            border: "none",
+            background: "#7c3aed",
+            color: "#fff",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+          onClick={() => setShowCreateSection(true)}
+        >
+          + Create Section
+        </button>
+      )}
 
       {sections.length > 0 && (
         <div style={{ marginBottom: "24px" }}>
