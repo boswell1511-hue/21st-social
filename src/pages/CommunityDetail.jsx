@@ -33,11 +33,17 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
   const [posts, setPosts] = useState([]);
 
   const [sections, setSections] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [selectedSectionId, setSelectedSectionId] = useState("");
   const [showCreateSection, setShowCreateSection] = useState(false);
   const [sectionName, setSectionName] = useState("");
   const [sectionDescription, setSectionDescription] = useState("");
   const [sectionIcon, setSectionIcon] = useState("📁");
+  const [showCreateTopic, setShowCreateTopic] = useState(false);
+  const [topicSectionId, setTopicSectionId] = useState("");
+  const [topicName, setTopicName] = useState("");
+  const [topicDescription, setTopicDescription] = useState("");
+  const [topicIcon, setTopicIcon] = useState("💬");
 
   const [memberCount, setMemberCount] = useState(
     community.member_count ?? 0
@@ -46,6 +52,8 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [currentUserId, setCurrentUserId] = useState("");
   const [canManageSections, setCanManageSections] = useState(false);
+  const [canManageTopics, setCanManageTopics] = useState(false);
+  const [showRoleManager, setShowRoleManager] = useState(true);
 
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaType, setMediaType] = useState("");
@@ -98,14 +106,15 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
       if (cancelled) return;
 
       if (accessGranted) {
-        await Promise.all([
-          loadCommunity(),
-          loadSections(),
-          loadPosts(),
-          loadSectionPermission(userId),
-        ]);
+        await loadCommunity();
+        const accessibleSections = await loadSections();
+        await loadTopics(accessibleSections);
+        await loadPosts(accessibleSections);
+        await loadSectionPermission(userId);
+          await loadTopicPermission(userId);
       } else {
         setSections([]);
+        setTopics([]);
         setPosts([]);
         setCanManageSections(false);
       }
@@ -137,6 +146,24 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     } catch (permissionError) {
       console.error(permissionError);
       setCanManageSections(false);
+    }
+  }
+
+  async function loadTopicPermission(userId = currentUserId) {
+    if (!community?.id || !userId) {
+      setCanManageTopics(false);
+      return;
+    }
+
+    try {
+      const allowed = await CommunityPermissionService.hasPermission(
+        community.id,
+        "manage_topics"
+      );
+      setCanManageTopics(allowed);
+    } catch (permissionError) {
+      console.error(permissionError);
+      setCanManageTopics(false);
     }
   }
 
@@ -212,14 +239,58 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
     if (error) {
       console.error(error);
-      return;
+      setSections([]);
+      return [];
     }
 
-    setSections(data || []);
+    const allSections = data || [];
+    const accessibleSectionIds = await CommunityPermissionService.getAccessibleSectionIds(
+      community.id,
+      allSections.map((section) => section.id)
+    );
+    const accessibleIdSet = new Set(accessibleSectionIds);
+    const accessibleSections = allSections.filter((section) =>
+      accessibleIdSet.has(section.id)
+    );
 
-    if (data?.length > 0) {
-      setSelectedSectionId((current) => current || data[0].id);
+    setSections(accessibleSections);
+
+    if (accessibleSections.length > 0) {
+      setSelectedSectionId((current) =>
+        accessibleIdSet.has(current) ? current : accessibleSections[0].id
+      );
+    } else {
+      setSelectedSectionId("");
     }
+
+    return accessibleSections;
+  }
+
+  async function loadTopics(accessibleSections = sections) {
+    const accessibleSectionIds = (accessibleSections || []).map(
+      (section) => section.id
+    );
+
+    if (accessibleSectionIds.length === 0) {
+      setTopics([]);
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from("community_topics")
+      .select("*")
+      .in("section_id", accessibleSectionIds)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      setTopics([]);
+      return [];
+    }
+
+    const loadedTopics = data || [];
+    setTopics(loadedTopics);
+    return loadedTopics;
   }
 
   async function createSection() {
@@ -255,10 +326,61 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
     setShowCreateSection(false);
   }
 
-  async function loadPosts() {
+  async function createTopic() {
+    if (!canManageTopics) {
+      alert("You do not have permission to manage community topics.");
+      return;
+    }
+
+    if (!topicSectionId) {
+      alert("Please select a section for this topic.");
+      return;
+    }
+
+    if (!topicName.trim()) {
+      alert("Please enter a topic name.");
+      return;
+    }
+
+    const sectionTopics = topics.filter(
+      (topic) => topic.section_id === topicSectionId
+    );
+
+    const { error } = await supabase.from("community_topics").insert({
+      section_id: topicSectionId,
+      name: topicName.trim(),
+      description: topicDescription.trim() || "",
+      icon: topicIcon.trim() || "💬",
+      sort_order: sectionTopics.length,
+    });
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    await loadTopics(sections);
+
+    setTopicName("");
+    setTopicDescription("");
+    setTopicIcon("💬");
+    setShowCreateTopic(false);
+  }
+
+  async function loadPosts(accessibleSections = sections) {
     setLoadingPosts(true);
 
     try {
+      const accessibleSectionIds = (accessibleSections || []).map(
+        (section) => section.id
+      );
+
+      if (accessibleSectionIds.length === 0) {
+        setPosts([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("community_posts")
         .select(`
@@ -270,6 +392,7 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
           )
         `)
         .eq("community_id", community.id)
+        .in("section_id", accessibleSectionIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -1135,10 +1258,39 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
       <hr style={{ margin: "30px 0" }} />
 
-      <CommunityRoleManager
-        communityId={community.id}
-        isOwner={community.owner_id === currentUserId}
-      />
+      {community.owner_id === currentUserId && (
+        <div
+          style={{
+            marginBottom: "20px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setShowRoleManager((visible) => !visible)}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: "10px",
+              border: "none",
+              background: "#27272a",
+              color: "#fff",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            {showRoleManager
+              ? "▲ Collapse Manage Members & Roles"
+              : "▼ Expand Manage Members & Roles"}
+          </button>
+
+          {showRoleManager && (
+            <CommunityRoleManager
+              communityId={community.id}
+              isOwner={community.owner_id === currentUserId}
+            />
+          )}
+        </div>
+      )}
 
       {canManageSections && (
         <button
@@ -1155,6 +1307,29 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
           onClick={() => setShowCreateSection(true)}
         >
           + Create Section
+        </button>
+      )}
+
+      {canManageTopics && sections.length > 0 && (
+        <button
+          type="button"
+          style={{
+            marginBottom: "20px",
+            marginLeft: "10px",
+            padding: "12px 20px",
+            borderRadius: "10px",
+            border: "none",
+            background: "#2563eb",
+            color: "#fff",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+          onClick={() => {
+            setTopicSectionId((current) => current || sections[0].id);
+            setShowCreateTopic(true);
+          }}
+        >
+          + Create Topic
         </button>
       )}
 
@@ -1182,6 +1357,32 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
 
                 {section.description && (
                   <p>{section.description}</p>
+                )}
+
+                {topics.filter((topic) => topic.section_id === section.id).length > 0 && (
+                  <div style={{ marginTop: "12px" }}>
+                    <strong>Topics</strong>
+
+                    <div style={{ marginTop: "8px" }}>
+                      {topics
+                        .filter((topic) => topic.section_id === section.id)
+                        .map((topic) => (
+                          <div
+                            key={topic.id}
+                            style={{
+                              padding: "8px 10px",
+                              marginBottom: "6px",
+                              borderRadius: "8px",
+                              background: "#222",
+                              border: "1px solid #333",
+                            }}
+                          >
+                            {topic.icon ? `${topic.icon} ` : ""}
+                            {topic.name}
+                          </div>
+                        ))}
+                    </div>
+                  </div>
                 )}
 
                 <p style={{ opacity: 0.6, fontSize: "13px" }}>
@@ -1919,6 +2120,96 @@ function CommunityDetail({ community, onBack, onJoin, joined }) {
           })
         )}
       </div>
+
+      {showCreateTopic && (
+        <div
+          style={{
+            marginTop: "24px",
+            padding: "20px",
+            borderRadius: "16px",
+            background: "#18181b",
+            border: "1px solid #333",
+          }}
+        >
+          <h3>Create Topic</h3>
+
+          <select
+            value={topicSectionId}
+            onChange={(event) => setTopicSectionId(event.target.value)}
+            style={{
+              width: "100%",
+              marginTop: "12px",
+              padding: "12px",
+              borderRadius: "10px",
+            }}
+          >
+            <option value="">Select a section</option>
+            {sections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.icon ? `${section.icon} ` : ""}{section.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            placeholder="Topic name"
+            value={topicName}
+            onChange={(event) => setTopicName(event.target.value)}
+            style={{
+              width: "100%",
+              marginTop: "12px",
+              padding: "12px",
+              borderRadius: "10px",
+            }}
+          />
+
+          <input
+            type="text"
+            placeholder="Description (optional)"
+            value={topicDescription}
+            onChange={(event) => setTopicDescription(event.target.value)}
+            style={{
+              width: "100%",
+              marginTop: "12px",
+              padding: "12px",
+              borderRadius: "10px",
+            }}
+          />
+
+          <input
+            type="text"
+            placeholder="Icon (optional)"
+            value={topicIcon}
+            onChange={(event) => setTopicIcon(event.target.value)}
+            style={{
+              width: "100%",
+              marginTop: "12px",
+              padding: "12px",
+              borderRadius: "10px",
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              marginTop: "16px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowCreateTopic(false)}
+            >
+              Cancel
+            </button>
+
+            <button type="button" onClick={createTopic}>
+              Create Topic
+            </button>
+          </div>
+        </div>
+      )}
 
       {showCreateSection && (
         <div
