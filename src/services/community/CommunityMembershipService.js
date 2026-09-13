@@ -1,4 +1,5 @@
 import supabase from "../../lib/supabase";
+import CommunityPermissionService from "./CommunityPermissionService";
 
 const CommunityMembershipService = {
   // =========================
@@ -244,6 +245,17 @@ const CommunityMembershipService = {
       throw new Error("This role does not belong to the member's community.");
     }
 
+    const canManageRoles = await CommunityPermissionService.hasPermission(
+      member.community_id,
+      "manage_member_roles"
+    );
+
+    if (!canManageRoles) {
+      throw new Error(
+        "You do not have permission to manage community member roles."
+      );
+    }
+
     const alreadyAssigned = await this.hasRole(memberId, roleId);
 
     if (alreadyAssigned) {
@@ -271,6 +283,29 @@ const CommunityMembershipService = {
   },
 
   async removeRole(memberId, roleId) {
+    const user = await this.getCurrentUser();
+
+    if (!user) throw new Error("Please sign in first.");
+
+    const { data: member, error: memberError } = await supabase
+      .from("community_members")
+      .select("id, community_id")
+      .eq("id", memberId)
+      .single();
+
+    if (memberError) throw memberError;
+
+    const canManageRoles = await CommunityPermissionService.hasPermission(
+      member.community_id,
+      "manage_member_roles"
+    );
+
+    if (!canManageRoles) {
+      throw new Error(
+        "You do not have permission to manage community member roles."
+      );
+    }
+
     const { error } = await supabase
       .from("community_member_roles")
       .delete()

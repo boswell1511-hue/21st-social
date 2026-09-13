@@ -21,7 +21,10 @@ function CommunityRoleManager({ communityId, isOwner }) {
   const [memberRoles, setMemberRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [rolePermissions, setRolePermissions] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [roleSectionAccess, setRoleSectionAccess] = useState([]);
   const [loadingRolePermissions, setLoadingRolePermissions] = useState(false);
+  const [loadingSectionAccess, setLoadingSectionAccess] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleDescription, setNewRoleDescription] = useState("");
   const [newRoleIsModerator, setNewRoleIsModerator] = useState(false);
@@ -47,23 +50,27 @@ function CommunityRoleManager({ communityId, isOwner }) {
   useEffect(() => {
     if (!selectedRoleId) {
       setRolePermissions([]);
+      setRoleSectionAccess([]);
       return;
     }
     loadSelectedRolePermissions(selectedRoleId);
+    loadSelectedRoleSectionAccess(selectedRoleId);
   }, [selectedRoleId]);
 
   async function loadManagerData() {
     setLoading(true);
     setError("");
     try {
-      const [nextMembers, nextRoles, nextPermissions] = await Promise.all([
+      const [nextMembers, nextRoles, nextPermissions, nextSections] = await Promise.all([
         CommunityMembershipService.getCommunityMembers(communityId),
         CommunityMembershipService.getCommunityRoles(communityId),
         CommunityPermissionService.getPermissions(),
+        getCommunitySections(communityId),
       ]);
       setMembers(nextMembers);
       setRoles(nextRoles);
       setPermissions(nextPermissions);
+      setSections(nextSections);
       setSelectedMemberId((current) =>
         current && nextMembers.some((member) => member.id === current)
           ? current
@@ -97,6 +104,10 @@ function CommunityRoleManager({ communityId, isOwner }) {
     }
   }
 
+  async function getCommunitySections(targetCommunityId) {
+    return CommunityPermissionService.getCommunitySections(targetCommunityId);
+  }
+
   async function loadSelectedRolePermissions(roleId) {
     setLoadingRolePermissions(true);
     setError("");
@@ -109,6 +120,72 @@ function CommunityRoleManager({ communityId, isOwner }) {
       setError(loadError.message || "Unable to load role permissions.");
     } finally {
       setLoadingRolePermissions(false);
+    }
+  }
+
+  async function loadSelectedRoleSectionAccess(roleId) {
+    setLoadingSectionAccess(true);
+    setError("");
+    try {
+      setRoleSectionAccess(
+        await CommunityPermissionService.getRoleSectionAccess(roleId)
+      );
+    } catch (loadError) {
+      console.error(loadError);
+      setError(loadError.message || "Unable to load section access.");
+    } finally {
+      setLoadingSectionAccess(false);
+    }
+  }
+
+  async function toggleSectionAccess(section, canAccess) {
+    if (!selectedRoleId || saving) return;
+
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await CommunityPermissionService.setRoleSectionAccess(
+        selectedRoleId,
+        section.id,
+        canAccess
+      );
+
+      setRoleSectionAccess((current) => {
+        if (canAccess) {
+          return current.filter((item) => item.section_id !== section.id);
+        }
+
+        const existing = current.find(
+          (item) => item.section_id === section.id
+        );
+
+        if (existing) {
+          return current.map((item) =>
+            item.section_id === section.id
+              ? { ...item, can_access: false }
+              : item
+          );
+        }
+
+        return [
+          ...current,
+          { role_id: selectedRoleId, section_id: section.id, can_access: false },
+        ];
+      });
+
+      setSuccess(
+        `Section “${section.name}” ${canAccess ? "enabled" : "restricted"} for this role.`
+      );
+    } catch (accessError) {
+      console.error(accessError);
+      setError(
+        accessError.message ||
+          `Unable to ${canAccess ? "enable" : "restrict"} this section.`
+      );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -429,6 +506,51 @@ function CommunityRoleManager({ communityId, isOwner }) {
                 );
               })
             )}
+          </div>
+
+          <div style={{
+            marginTop: "20px", padding: "16px", borderRadius: "12px",
+            background: "#111", border: "1px solid #333",
+          }}>
+            <h3 style={{ marginTop: 0 }}>Section Access</h3>
+            <p style={{ opacity: 0.7 }}>
+              Choose which community sections the selected role can view. New roles can access all sections by default.
+            </p>
+
+            {loadingSectionAccess ? <p>Loading section access...</p> : sections.length === 0 ? (
+              <p style={{ opacity: 0.7 }}>No community sections are available.</p>
+            ) : sections.map((section) => {
+              const restricted = roleSectionAccess.some(
+                (item) => item.section_id === section.id && item.can_access === false
+              );
+              const canAccess = !restricted;
+
+              return (
+                <label key={section.id} style={{
+                  display: "flex", alignItems: "flex-start", gap: "10px",
+                  marginTop: "10px", padding: "10px", borderRadius: "8px",
+                  background: "#18181b", opacity: saving ? 0.6 : 1,
+                  cursor: saving ? "default" : "pointer",
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={canAccess}
+                    disabled={saving}
+                    onChange={(event) =>
+                      toggleSectionAccess(section, event.target.checked)
+                    }
+                  />
+                  <span>
+                    <strong>{section.icon || "📁"} {section.name}</strong>
+                    {section.description && (
+                      <span style={{ display: "block", marginTop: "3px", fontSize: "13px", opacity: 0.7 }}>
+                        {section.description}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
           </div>
 
           <button type="button" onClick={assignSelectedRole}
