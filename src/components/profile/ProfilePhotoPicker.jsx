@@ -1,61 +1,115 @@
 import { useRef, useState } from "react";
 import "../../styles/login.css";
 
-function ProfilePhotoPicker({ onImageSelected }) {
-  const [image, setImage] = useState(null);
-    const fileInputRef = useRef(null);
+function ProfilePhotoPicker({ onImageSelected, currentImageUrl = "" }) {
+  const [image, setImage] = useState(currentImageUrl || "");
+    const [pendingFile, setPendingFile] = useState(null);
+      const [pendingImage, setPendingImage] = useState("");
+        const fileInputRef = useRef(null);
 
-      function handleImageChange(event) {
-          const file = event.target.files[0];
+          function handleImageChange(event) {
+              const file = event.target.files[0];
 
-              if (!file) return;
+                  if (!file) return;
 
-                  const imageUrl = URL.createObjectURL(file);
-                      setImage(imageUrl);
+                      const imageUrl = URL.createObjectURL(file);
 
-                          if (onImageSelected) {
-                                onImageSelected(file);
-                                    }
-                                      }
+                          setPendingFile(file);
+                              setPendingImage(imageUrl);
 
-                                        function openFilePicker() {
-                                            fileInputRef.current.click();
-                                              }
+                                  // Allow the same file to be selected again later.
+                                      event.target.value = "";
+                                        }
 
-                                                return (
-                                                    <div className="profile-photo-picker">
-                                                          <div
-                                                                  className="profile-photo-placeholder"
-                                                                          onClick={openFilePicker}
-                                                                                >
-                                                                                        {image ? (
-                                                                                                  <img
-                                                                                                              src={image}
-                                                                                                                          alt="Profile"
-                                                                                                                                      className="profile-photo"
-                                                                                                                                                />
-                                                                                                                                                        ) : (
-                                                                                                                                                                  <span className="profile-photo-icon">👤</span>
-                                                                                                                                                                          )}
-                                                                                                                                                                                </div>
+                                          function cancelSelection() {
+                                              if (pendingImage) {
+                                                    URL.revokeObjectURL(pendingImage);
+                                                        }
 
-                                                                                                                                                                                      <input
-                                                                                                                                                                                              ref={fileInputRef}
-                                                                                                                                                                                                      type="file"
-                                                                                                                                                                                                              accept="image/*"
-                                                                                                                                                                                                                      onChange={handleImageChange}
-                                                                                                                                                                                                                              style={{ display: "none" }}
-                                                                                                                                                                                                                                    />
+                                                            setPendingFile(null);
+                                                                setPendingImage("");
+                                                                  }
 
-                                                                                                                                                                                                                                          <button
-                                                                                                                                                                                                                                                  type="button"
-                                                                                                                                                                                                                                                          className="secondary"
-                                                                                                                                                                                                                                                                  onClick={openFilePicker}
-                                                                                                                                                                                                                                                                        >
-                                                                                                                                                                                                                                                                                Upload Profile Photo
-                                                                                                                                                                                                                                                                                      </button>
-                                                                                                                                                                                                                                                                                          </div>
-                                                                                                                                                                                                                                                                                            );
-                                                                                                                                                                                                                                                                                            }
+                                                                    function confirmSelection() {
+                                                                        if (!pendingFile || !pendingImage) return;
 
-                                                                                                                                                                                                                                                                                            export default ProfilePhotoPicker;
+                                                                            setImage(pendingImage);
+
+                                                                                if (onImageSelected) {
+                                                                                      onImageSelected(pendingFile);
+                                                                                          }
+
+                                                                                              setPendingFile(null);
+                                                                                                  setPendingImage("");
+                                                                                                    }
+
+                                                                                                      function openFilePicker() {
+                                                                                                          fileInputRef.current?.click();
+                                                                                                            }
+
+                                                                                                              return (
+                                                                                                                  <div className="profile-photo-picker">
+                                                                                                                        <div
+                                                                                                                                className="profile-photo-placeholder"
+                                                                                                                                        onClick={openFilePicker}
+                                                                                                                                              >
+                                                                                                                                                      {image ? (
+                                                                                                                                                                <img
+                                                                                                                                                                            src={image}
+                                                                                                                                                                                        alt="Profile"
+                                                                                                                                                                                                    className="profile-photo"
+                                                                                                                                                                                                              />
+                                                                                                                                                                                                                      ) : (
+                                                                                                                                                                                                                                <span className="profile-photo-icon">👤</span>
+                                                                                                                                                                                                                                        )}
+                                                                                                                                                                                                                                              </div>
+
+                                                                                                                                                                                                                                                    <input
+                                                                                                                                                                                                                                                            ref={fileInputRef}
+                                                                                                                                                                                                                                                                    type="file"
+                                                                                                                                                                                                                                                                            accept="image/*"
+                                                                                                                                                                                                                                                                                    onChange={handleImageChange}
+                                                                                                                                                                                                                                                                                            style={{ display: "none" }}
+                                                                                                                                                                                                                                                                                                  />
+
+                                                                                                                                                                                                                                                                                                        <button
+                                                                                                                                                                                                                                                                                                                type="button"
+                                                                                                                                                                                                                                                                                                                        className="secondary"
+                                                                                                                                                                                                                                                                                                                                onClick={openFilePicker}
+                                                                                                                                                                                                                                                                                                                                      >
+                                                                                                                                                                                                                                                                                                                                              Upload Profile Photo
+                                                                                                                                                                                                                                                                                                                                                    </button>
+
+                                                                                                                                                                                                                                                                                                                                                          {pendingImage && (
+                                                                                                                                                                                                                                                                                                                                                                  <div className="profile-photo-confirmation">
+                                                                                                                                                                                                                                                                                                                                                                            <h3>Use This Photo?</h3>
+
+                                                                                                                                                                                                                                                                                                                                                                                      <img
+                                                                                                                                                                                                                                                                                                                                                                                                  src={pendingImage}
+                                                                                                                                                                                                                                                                                                                                                                                                              alt="Selected profile preview"
+                                                                                                                                                                                                                                                                                                                                                                                                                          className="profile-photo"
+                                                                                                                                                                                                                                                                                                                                                                                                                                    />
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                              <div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                          <button
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                        type="button"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      className="secondary"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    onClick={cancelSelection}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                >
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              Cancel
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          </button>
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      <button
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    type="button"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  onClick={confirmSelection}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              >
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            Use This Photo
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                )}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      );
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      }
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      export default ProfilePhotoPicker;
