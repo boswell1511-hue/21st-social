@@ -1,146 +1,172 @@
 import supabase from "../../lib/supabase";
 
 const BUCKET_NAME = "avatars";
+const BACKGROUND_BUCKET_NAME = "profile-backgrounds";
 
 const ProfileService = {
   async getCurrentUser() {
-      const {
-            data: { user },
-                  error,
-                      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-                          if (error) throw error;
+    if (error) throw error;
 
-                              return user;
-                                },
+    return user;
+  },
 
-                                  async profileExists() {
-                                      const user = await this.getCurrentUser();
+  async profileExists() {
+    const user = await this.getCurrentUser();
 
-                                          if (!user) return false;
+    if (!user) return false;
 
-                                              const { data, error } = await supabase
-                                                    .from("profiles")
-                                                          .select("id")
-                                                                .eq("id", user.id)
-                                                                      .maybeSingle();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
 
-                                                                          if (error) throw error;
+    if (error) throw error;
 
-                                                                              return !!data;
-                                                                                },
+    return !!data;
+  },
 
-                                                                                  async getProfile() {
-                                                                                      const user = await this.getCurrentUser();
+  async getProfile() {
+    const user = await this.getCurrentUser();
 
-                                                                                          if (!user) return null;
+    if (!user) return null;
 
-                                                                                              const { data, error } = await supabase
-                                                                                                    .from("profiles")
-                                                                                                          .select("*")
-                                                                                                                .eq("id", user.id)
-                                                                                                                      .single();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
 
-                                                                                                                          if (error) throw error;
+    if (error) throw error;
 
-                                                                                                                              return data;
-                                                                                                                                },
+    return data;
+  },
 
-                                                                                                                                  async createProfile(profile) {
-                                                                                                                                      const user = await this.getCurrentUser();
+  async createProfile(profile) {
+    const user = await this.getCurrentUser();
 
-                                                                                                                                          if (!user) {
-                                                                                                                                                throw new Error("No authenticated user.");
-                                                                                                                                                    }
+    if (!user) {
+      throw new Error("No authenticated user.");
+    }
 
-                                                                                                                                                        const { data, error } = await supabase
-                                                                                                                                                              .from("profiles")
-                                                                                                                                                                    .insert({
-                                                                                                                                                                            id: user.id,
-                                                                                                                                                                                    ...profile,
-                                                                                                                                                                                          })
-                                                                                                                                                                                                .select()
-                                                                                                                                                                                                      .single();
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        ...profile,
+      })
+      .select()
+      .single();
 
-                                                                                                                                                                                                          if (error) throw error;
+    if (error) throw error;
 
-                                                                                                                                                                                                              return data;
-                                                                                                                                                                                                                },
+    return data;
+  },
 
-                                                                                                                                                                                                                  async updateProfile(profile) {
-                                                                                                                                                                                                                      const user = await this.getCurrentUser();
+  async updateProfile(profile) {
+    const user = await this.getCurrentUser();
 
-                                                                                                                                                                                                                          if (!user) {
-                                                                                                                                                                                                                                throw new Error("No authenticated user.");
-                                                                                                                                                                                                                                    }
+    if (!user) {
+      throw new Error("No authenticated user.");
+    }
 
-                                                                                                                                                                                                                                        const { data, error } = await supabase
-                                                                                                                                                                                                                                              .from("profiles")
-                                                                                                                                                                                                                                                    .update(profile)
-                                                                                                                                                                                                                                                          .eq("id", user.id)
-                                                                                                                                                                                                                                                                .select()
-                                                                                                                                                                                                                                                                      .single();
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(profile)
+      .eq("id", user.id)
+      .select()
+      .single();
 
-                                                                                                                                                                                                                                                                          if (error) throw error;
+    if (error) throw error;
 
-                                                                                                                                                                                                                                                                              return data;
-                                                                                                                                                                                                                                                                                },
+    return data;
+  },
 
-                                                                                                                                                                                                                                                                                  async uploadAvatar(file) {
-                                                                                                                                                                                                                                                                                      if (!file) return "";
+  async uploadAvatar(file) {
+    if (!file) return "";
 
-                                                                                                                                                                                                                                                                                          const user = await this.getCurrentUser();
+    const user = await this.getCurrentUser();
 
-                                                                                                                                                                                                                                                                                              if (!user) {
-                                                                                                                                                                                                                                                                                                    throw new Error("No authenticated user.");
-                                                                                                                                                                                                                                                                                                        }
+    if (!user) {
+      throw new Error("No authenticated user.");
+    }
 
-                                                                                                                                                                                                                                                                                                            const fileName = `${user.id}-${Date.now()}`;
+    const fileName = `${user.id}-${Date.now()}`;
 
-                                                                                                                                                                                                                                                                                                                const { error } = await supabase.storage
-                                                                                                                                                                                                                                                                                                                      .from(BUCKET_NAME)
-                                                                                                                                                                                                                                                                                                                            .upload(fileName, file);
+    const { error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(fileName, file);
 
-                                                                                                                                                                                                                                                                                                                                if (error) throw error;
+    if (error) throw error;
 
-                                                                                                                                                                                                                                                                                                                                    const { data } = supabase.storage
-                                                                                                                                                                                                                                                                                                                                          .from(BUCKET_NAME)
-                                                                                                                                                                                                                                                                                                                                                .getPublicUrl(fileName);
+    const { data } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(fileName);
 
-                                                                                                                                                                                                                                                                                                                                                    return data.publicUrl;
-                                                                                                                                                                                                                                                                                                                                                      },
-async getProfileById(userId) {
-      const { data, error } = await supabase
-          .from("profiles")
-              .select("*")
-                  .eq("id", userId)
-                      .single();
+    return data.publicUrl;
+  },
 
-                        if (error) throw error;
+  async uploadHeaderBackground(file) {
+    if (!file) return "";
 
-                          return data;
-                          },
+    const user = await this.getCurrentUser();
 
-                                                                                                                                                                                                                                                                                                                                                        async refreshProfile() {
-                                                                                                                                                                                                                                                                                                                                                            return await this.getProfile();
-                                                                                                                                                                                                                                                                                                                                                              },
+    if (!user) {
+      throw new Error("No authenticated user.");
+    }
 
-                                                                                                                                                                                                                                                                                                                                                                async deleteProfile() {
-                                                                                                                                                                                                                                                                                                                                                                    const user = await this.getCurrentUser();
+    const fileName = `${user.id}-${Date.now()}`;
 
-                                                                                                                                                                                                                                                                                                                                                                        if (!user) {
-                                                                                                                                                                                                                                                                                                                                                                              throw new Error("No authenticated user.");
-                                                                                                                                                                                                                                                                                                                                                                                  }
+    const { error } = await supabase.storage
+      .from(BACKGROUND_BUCKET_NAME)
+      .upload(fileName, file);
 
-                                                                                                                                                                                                                                                                                                                                                                                      const { error } = await supabase
-                                                                                                                                                                                                                                                                                                                                                                                            .from("profiles")
-                                                                                                                                                                                                                                                                                                                                                                                                  .delete()
-                                                                                                                                                                                                                                                                                                                                                                                                        .eq("id", user.id);
+    if (error) throw error;
 
-                                                                                                                                                                                                                                                                                                                                                                                                            if (error) throw error;
+    const { data } = supabase.storage
+      .from(BACKGROUND_BUCKET_NAME)
+      .getPublicUrl(fileName);
 
-                                                                                                                                                                                                                                                                                                                                                                                                                return true;
-                                                                                                                                                                                                                                                                                                                                                                                                                  },
-                                                                                                                                                                                                                                                                                                                                                                                                                  };
+    return data.publicUrl;
+  },
 
-                                                                                                                                                                                                                                                                                                                                                                                                                  export default ProfileService;
+  async getProfileById(userId) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) throw error;
+
+    return data;
+  },
+
+  async refreshProfile() {
+    return await this.getProfile();
+  },
+
+  async deleteProfile() {
+    const user = await this.getCurrentUser();
+
+    if (!user) {
+      throw new Error("No authenticated user.");
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", user.id);
+
+    if (error) throw error;
+
+    return true;
+  },
+};
+
+export default ProfileService;
