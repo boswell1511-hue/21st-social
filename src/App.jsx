@@ -20,9 +20,6 @@ import CommunityMembershipService from "./services/community/CommunityMembership
 function App() {
   const [screen, setScreen] = useState(() => {
     try {
-      // TESTING ONLY:
-      // A fresh opening of the test app starts at Login.
-      // A browser refresh keeps the last screen/page.
       const navigationEntry = performance.getEntriesByType("navigation")[0];
       const isRefresh = navigationEntry?.type === "reload";
 
@@ -77,206 +74,180 @@ function App() {
       console.warn("Unable to persist navigation state:", error);
     }
   }, [screen, selectedUserId, selectedCommunity]);
-async function loadJoinedCommunities() {
-        const {
-            data: { user },
-              } = await supabase.auth.getUser();
 
-                if (!user) return;
+  async function loadJoinedCommunities() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-                  const { data, error } = await supabase
-                      .from("community_members")
-                          .select("community_id")
-                              .eq("user_id", user.id);
+    if (!user) return;
 
-                                if (error) {
-                                    console.error(error);
-                                        return;
-                                          }
+    const { data, error } = await supabase
+      .from("community_members")
+      .select("community_id")
+      .eq("user_id", user.id);
 
-                                            setJoinedCommunities(data.map((item) => item.community_id));
-                                            }
-                                          
-                                                                                                                        useEffect(() => {
-                                                                                                                            loadJoinedCommunities();
-                                                                                                                            }, []);
-                                                                                                                        
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-      switch (screen) {
-          case "login":
-                return (
-                        <Login
-                                  onRegister={() => setScreen("register")}
-                                            onSuccess={(nextScreen) => setScreen(nextScreen)}
-                                                    />
-                                                          );
+    setJoinedCommunities(data.map((item) => item.community_id));
+  }
 
-                                                              case "register":
-                                                                    return (
-                                                                            <Register
-                                                                                      onBack={() => setScreen("login")}
-                                                                                                onSuccess={() => setScreen("profile")}
-                                                                                                        />
-                                                                                                              );
+  useEffect(() => {
+    loadJoinedCommunities();
+  }, []);
 
-                                                                                                                  case "profile":
-                                                                                                                        return (
-                                                                                                                                <ProfileSetup
-                                                                                                                                          onContinue={() => setScreen("community")}
-                                                                                                                                                  />
-                                                                                                                                                        );
+  function openPublicProfile(userId) {
+    setSelectedUserId(userId);
+    setScreen("publicProfile");
+  }
 
-                                                                                                                                                            case "community":
-                                                                                                                                                                  return (
-                                                                                                                                                                          <CommunityEntrance
-                                                                                                                                                                                    onEnter={() => setScreen("home")}
-                                                                                                                                                                                            />
-                                                                                                                                                                                                  );
+  switch (screen) {
+    case "login":
+      return (
+        <Login
+          onRegister={() => setScreen("register")}
+          onSuccess={(nextScreen) => setScreen(nextScreen)}
+        />
+      );
 
-                                                                                                                                                                                                      case "home":
-                                                                                                                                                                                                            return (
-                                                                                                                                                                                                                    <Home
-                                                                                                                                                                                                                              onMyProfile={() => setScreen("myProfile")}
-                                                                                                                                                                                                                                        onFindFriends={() => setScreen("findFriends")}
-                                                                                                                                                                                                                                                  onCreatePost={() => setScreen("createPost")}
-                                                                                                                                                                                                                                                            onCommunity={() => setScreen("feed")}
-                                                                                                                                                                                                                                                                     onDiscoverCommunities={() => setScreen("discoverCommunities")}
-                                                                                                                                                                                                                                                                    />
-                                                                                                                                                                                                                                                                          );
+    case "register":
+      return (
+        <Register
+          onBack={() => setScreen("login")}
+          onSuccess={() => setScreen("profile")}
+        />
+      );
 
-                                                                                                                                                                                                                                                                              case "myProfile":
-                                                                                                                                                                                                                                                                                    return (
-                                                                                                                                                                                                                                                                                            <MyProfile
-                                                                                                                                                                                                                                                                                                      onBack={() => setScreen("home")}
-                                                                                                                                                                                                                                                                                                                onEditProfile={() => setScreen("editProfile")}
-                                                                                                                                                                                                                                                                                                                        />
-                                                                                                                                                                                                                                                                                                                              );
+    case "profile":
+      return <ProfileSetup onContinue={() => setScreen("community")} />;
 
-                                                                                                                                                                                                                                                                                                                                  case "editProfile":
-                                                                                                                                                                                                                                                                                                                                        return (
-                                                                                                                                                                                                                                                                                                                                                <EditProfile
-                                                                                                                                                                                                                                                                                                                                                          onBack={() => setScreen("myProfile")}
-                                                                                                                                                                                                                                                                                                                                                                  />
-                                                                                                                                                                                                                                                                                                                                                                        );
+    case "community":
+      return <CommunityEntrance onEnter={() => setScreen("home")} />;
 
-                                                                                                                                                                                                                                                                                                                                                                            case "findFriends":
-                                                                                                                                                                                                                                                                                                                                                                                  return (
-                                                                                                                                                                                                                                                                                                                                                                                          <FindFriends
-                                                                                                                                                                                                                                                                                                                                                                                                    onBack={() => setScreen("home")}
-                                                                                                                                                                                                                                                                                                                                                                                                              onViewProfile={(userId) => {
-                                                                                                                                                                                                                                                                                                                                                                                                                          setSelectedUserId(userId);
-                                                                                                                                                                                                                                                                                                                                                                                                                                      setScreen("publicProfile");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                }}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                        />
-                                                                                                                                                                                                                                                                                                                                                                                                                                                              );
+    case "home":
+      return (
+        <Home
+          onMyProfile={() => setScreen("myProfile")}
+          onFindFriends={() => setScreen("findFriends")}
+          onCreatePost={() => setScreen("createPost")}
+          onCommunity={() => setScreen("feed")}
+          onDiscoverCommunities={() => setScreen("discoverCommunities")}
+        />
+      );
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                  case "publicProfile":
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return (
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <PublicProfile
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          userId={selectedUserId}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    onBack={() => setScreen("findFriends")}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            />
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  );
+    case "myProfile":
+      return (
+        <MyProfile
+          onBack={() => setScreen("home")}
+          onEditProfile={() => setScreen("editProfile")}
+          onViewProfile={openPublicProfile}
+        />
+      );
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      case "createPost":
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            return (
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <CreatePost
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              onBack={() => setScreen("home")}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      />
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            );
+    case "editProfile":
+      return <EditProfile onBack={() => setScreen("myProfile")} />;
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                case "feed":
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      return (
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              <Feed
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                onBack={() => setScreen("home")}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  onCreatePost={() => setScreen("createPost")}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    onViewProfile={(userId) => {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        setSelectedUserId(userId);
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            setScreen("publicProfile");
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              }}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              />
-   
-                    
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          );
-case "discoverCommunities":
-          return (
-<DiscoverCommunities
-  onBack={() => setScreen("home")}
-    joinedCommunities={joinedCommunities}
-      setJoinedCommunities={setJoinedCommunities}
-        onJoinCommunity={async (communityId) => {
-              await CommunityMembershipService.toggle(communityId);
-                  await loadJoinedCommunities();
-                  }}
+    case "findFriends":
+      return (
+        <FindFriends
+          onBack={() => setScreen("home")}
+          onViewProfile={openPublicProfile}
+        />
+      );
+
+    case "publicProfile":
+      return (
+        <PublicProfile
+          userId={selectedUserId}
+          onBack={() => setScreen("findFriends")}
+        />
+      );
+
+    case "createPost":
+      return <CreatePost onBack={() => setScreen("home")} />;
+
+    case "feed":
+      return (
+        <Feed
+          onBack={() => setScreen("home")}
+          onCreatePost={() => setScreen("createPost")}
+          onViewProfile={openPublicProfile}
+        />
+      );
+
+    case "discoverCommunities":
+      return (
+        <DiscoverCommunities
+          onBack={() => setScreen("home")}
+          joinedCommunities={joinedCommunities}
+          setJoinedCommunities={setJoinedCommunities}
+          onJoinCommunity={async (communityId) => {
+            await CommunityMembershipService.toggle(communityId);
+            await loadJoinedCommunities();
+          }}
           onOpenCommunity={(community) => {
+            setSelectedCommunity(community);
+            setScreen("communityDetail");
+          }}
+          onCreateCommunity={() => setScreen("createCommunity")}
+        />
+      );
+
+    case "createCommunity":
+      return (
+        <CreateCommunity
+          onBack={() => setScreen("discoverCommunities")}
+        />
+      );
+
+    case "communityDetail":
+      if (!selectedCommunity) {
+        return (
+          <DiscoverCommunities
+            onBack={() => setScreen("home")}
+            joinedCommunities={joinedCommunities}
+            setJoinedCommunities={setJoinedCommunities}
+            onJoinCommunity={async (communityId) => {
+              await CommunityMembershipService.toggle(communityId);
+              await loadJoinedCommunities();
+            }}
+            onOpenCommunity={(community) => {
               setSelectedCommunity(community);
               setScreen("communityDetail");
             }}
             onCreateCommunity={() => setScreen("createCommunity")}
           />
         );
+      }
 
-                  case "createCommunity":
-                      return (
-                          <CreateCommunity
-                                onBack={() => setScreen("discoverCommunities")}
-                                    />
-                                      );
+      return (
+        <CommunityDetail
+          community={selectedCommunity}
+          onBack={() => setScreen("discoverCommunities")}
+          onJoin={async () => {
+            await CommunityMembershipService.toggle(selectedCommunity.id);
+            await loadJoinedCommunities();
 
-case "communityDetail":
-        if (!selectedCommunity) {
-          return (
-            <DiscoverCommunities
-              onBack={() => setScreen("home")}
-              joinedCommunities={joinedCommunities}
-              setJoinedCommunities={setJoinedCommunities}
-              onJoinCommunity={async (communityId) => {
-                await CommunityMembershipService.toggle(communityId);
-                await loadJoinedCommunities();
-              }}
-              onOpenCommunity={(community) => {
-                setSelectedCommunity(community);
-                setScreen("communityDetail");
-              }}
-              onCreateCommunity={() => setScreen("createCommunity")}
-            />
-          );
-        }
+            const { data, error } = await supabase
+              .from("communities")
+              .select("*")
+              .eq("id", selectedCommunity.id)
+              .single();
 
-        return (
-            <CommunityDetail
-                  community={selectedCommunity}
-                        onBack={() => setScreen("discoverCommunities")}
-                            onJoin={async () => {
-                                  await CommunityMembershipService.toggle(selectedCommunity.id);
+            if (!error && data) {
+              setSelectedCommunity(data);
+            }
+          }}
+          joined={joinedCommunities.includes(selectedCommunity?.id)}
+        />
+      );
 
-                                      // Refresh joined state
-                                          await loadJoinedCommunities();
+    default:
+      return <Welcome onContinue={() => setScreen("login")} />;
+  }
+}
 
-                                              // Refresh the selected community
-                                                  const { data, error } = await supabase
-                                                          .from("communities")
-                                                                  .select("*")
-                                                                          .eq("id", selectedCommunity.id)
-                                                                                  .single();
-
-                                                                                      if (!error && data) {
-                                                                                              setSelectedCommunity(data);
-                                                                                                  }
-                                                                                                  }}
-                            
-                              joined={joinedCommunities.includes(selectedCommunity?.id)}
-                                                />
-                                                  );
-                                                  
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    default:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          return (
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <Welcome
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            onContinue={() => setScreen("login")}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    />
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          );
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            export default App;
+export default App;

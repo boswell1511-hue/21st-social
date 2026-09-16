@@ -1,65 +1,60 @@
 import { useEffect, useState } from "react";
 import ProfileService from "../services/profile/ProfileService";
 import FollowService from "../services/friends/FollowService";
+import TrustedSixPicker from "./TrustedSixPicker";
 import "../styles/login.css";
 
-function MyProfile({ onBack, onEditProfile }) {
+function MyProfile({ onBack, onEditProfile, onViewProfile }) {
   const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
-      const [followers, setFollowers] = useState(0);
-        const [following, setFollowing] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [followers, setFollowers] = useState(0);
+  const [following, setFollowing] = useState(0);
 
-      useEffect(() => {
-          loadProfile();
-            }, []);
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
-              async function loadProfile() {
-                  try {
-                        const data = await ProfileService.getProfile();
-                              setProfile(data);
+  async function loadProfile() {
+    try {
+      const data = await ProfileService.getProfile();
+      setProfile(data);
 
-                              const followerCount = await FollowService.getFollowerCount(data.id);
-                              const followingCount = await FollowService.getFollowingCount(data.id);
+      const followerCount = await FollowService.getFollowerCount(data.id);
+      const followingCount = await FollowService.getFollowingCount(data.id);
 
-                              setFollowers(followerCount);
-                              setFollowing(followingCount);
-                                  } catch (error) {
-                                        alert(error.message);
-                                            } finally {
-                                                  setLoading(false);
-                                                      }
-                                                        }
+      setFollowers(followerCount);
+      setFollowing(followingCount);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-                                                          if (loading) {
-                                                              return (
-                                                                    <div className="login-screen">
-                                                                            <h1>Loading Profile...</h1>
-                                                                                  </div>
-                                                                                      );
-                                                                                        }
+  if (loading) {
+    return (
+      <div className="login-screen">
+        <h1>Loading Profile...</h1>
+      </div>
+    );
+  }
 
-                                                                                          if (!profile) {
-                                                                                              return (
-                                                                                                    <div className="login-screen">
-                                                                                                            <h1>Profile Not Found</h1>
-                                                                                                                    <p>Please complete your profile setup.</p>
+  if (!profile) {
+    return (
+      <div className="login-screen">
+        <h1>Profile Not Found</h1>
+        <p>Please complete your profile setup.</p>
 
-                                                                                                                            <button onClick={onBack}>
-                                                                                                                                      ← Back
-                                                                                                                                              </button>
-                                                                                                                                                    </div>
-                                                                                                                                                        );
-                                                                                                                                                          }
+        <button onClick={onBack}>← Back</button>
+      </div>
+    );
+  }
 
-                                                                                                                                                            return (
-                                                                                                                                                                <div className="login-screen">
-
-                                                                                                                                                                      <button
-                                                                                                                                                                              className="secondary"
-                                                                                                                                                                                      onClick={onBack}
-                                                                                                                                                                                            >
-                                                                                                                                                                                                    ← Back
-                                                                                                                                                                                                          </button>
+  return (
+    <div className="login-screen">
+      <button className="secondary" onClick={onBack}>
+        ← Back
+      </button>
 
       <div
         style={{
@@ -114,54 +109,51 @@ function MyProfile({ onBack, onEditProfile }) {
         </div>
       </div>
 
-                                                                                                                                                                                                                                                                                                                                                        <h1>{profile.display_name}</h1>
+      <h1>{profile.display_name}</h1>
 
-                                                                                                                                                                                                                                                                                                                                                              <p
-                                                                                                                                                                                                                                                                                                                                                                      style={{
-                                                                                                                                                                                                                                                                                                                                                                                color: "#4fc3f7",
-                                                                                                                                                                                                                                                                                                                                                                                          fontWeight: 600,
-                                                                                                                                                                                                                                                                                                                                                                                                    marginTop: "-8px",
-                                                                                                                                                                                                                                                                                                                                                                                                            }}
-                                                                                                                                                                                                                                                                                                                                                                                                                  >
-                                                                                                                                                                                                                                                                                                                                                                                                                          @{profile.username}
-                                                                                                                                                                                                                                                                                                                                                                                                                                </p>
+      <p
+        style={{
+          color: "#4fc3f7",
+          fontWeight: 600,
+          marginTop: "-8px",
+        }}
+      >
+        @{profile.username}
+      </p>
 
-                                                                                                                                                                                                                                                                                                                                                                           <div
-                                                                                                                                                                                                                                                                                                                                                                               style={{
-                                                                                                                                                                                                                                                                                                                                                                                   display: "flex",
-                                                                                                                                                                                                                                                                                                                                                                                   justifyContent: "center",
-                                                                                                                                                                                                                                                                                                                                                                                   gap: "32px",
-                                                                                                                                                                                                                                                                                                                                                                                   marginTop: "20px",
-                                                                                                                                                                                                                                                                                                                                                                                   marginBottom: "24px",
-                                                                                                                                                                                                                                                                                                                                                                                   color: "white",
-                                                                                                                                                                                                                                                                                                                                                                               }}
-                                                                                                                                                                                                                                                                                                                                                                           >
-                                                                                                                                                                                                                                                                                                                                                                               <div>
-                                                                                                                                                                                                                                                                                                                                                                                   <strong>{followers}</strong>
-                                                                                                                                                                                                                                                                                                                                                                                   <br />
-                                                                                                                                                                                                                                                                                                                                                                                   Followers
-                                                                                                                                                                                                                                                                                                                                                                               </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "32px",
+          marginTop: "20px",
+          marginBottom: "24px",
+          color: "white",
+        }}
+      >
+        <div>
+          <strong>{followers}</strong>
+          <br />
+          Followers
+        </div>
 
-                                                                                                                                                                                                                                                                                                                                                                               <div>
-                                                                                                                                                                                                                                                                                                                                                                                   <strong>{following}</strong>
-                                                                                                                                                                                                                                                                                                                                                                                   <br />
-                                                                                                                                                                                                                                                                                                                                                                                   Following
-                                                                                                                                                                                                                                                                                                                                                                               </div>
-                                                                                                                                                                                                                                                                                                                                                                           </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                      <div className="progress-card">
-                                                                                                                                                                                                                                                                                                                                                                                                                                              <h3>About Me</h3>
+        <div>
+          <strong>{following}</strong>
+          <br />
+          Following
+        </div>
+      </div>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                      <p>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                {profile.bio || "No bio has been added yet."}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </p>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                              </div>
+      <div className="progress-card">
+        <h3>About Me</h3>
+        <p>{profile.bio || "No bio has been added yet."}</p>
+      </div>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <button onClick={onEditProfile}>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ✏️ Edit Profile
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  </button>
+      <TrustedSixPicker onViewProfile={onViewProfile} />
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        );
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
+      <button onClick={onEditProfile}>✏️ Edit Profile</button>
+    </div>
+  );
+}
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        export default MyProfile;
+export default MyProfile;
