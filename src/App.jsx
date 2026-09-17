@@ -41,6 +41,8 @@ function App() {
     }
   });
 
+  const [profileHistory, setProfileHistory] = useState([]);
+
   const [selectedCommunity, setSelectedCommunity] = useState(() => {
     try {
       const saved = localStorage.getItem("21st_social_selected_community");
@@ -99,7 +101,19 @@ function App() {
     loadJoinedCommunities();
   }, []);
 
-  function openPublicProfile(userId) {
+  function openPublicProfile(
+    userId,
+    returnScreen = screen,
+    returnUserId = null
+  ) {
+    setProfileHistory((history) => [
+      ...history,
+      {
+        screen: returnScreen,
+        userId: returnUserId,
+      },
+    ]);
+
     setSelectedUserId(userId);
     setScreen("publicProfile");
   }
@@ -143,7 +157,7 @@ function App() {
         <MyProfile
           onBack={() => setScreen("home")}
           onEditProfile={() => setScreen("editProfile")}
-          onViewProfile={openPublicProfile}
+          onViewProfile={(userId) => openPublicProfile(userId, "myProfile")}
         />
       );
 
@@ -154,7 +168,7 @@ function App() {
       return (
         <FindFriends
           onBack={() => setScreen("home")}
-          onViewProfile={openPublicProfile}
+          onViewProfile={(userId) => openPublicProfile(userId, "findFriends")}
         />
       );
 
@@ -162,7 +176,29 @@ function App() {
       return (
         <PublicProfile
           userId={selectedUserId}
-          onBack={() => setScreen("findFriends")}
+          onBack={() => {
+            setProfileHistory((history) => {
+              if (history.length === 0) {
+                setScreen("home");
+                return history;
+              }
+
+              const previous = history[history.length - 1];
+              const remaining = history.slice(0, -1);
+
+              if (previous.screen === "publicProfile" && previous.userId) {
+                setSelectedUserId(previous.userId);
+              } else {
+                setSelectedUserId(null);
+              }
+
+              setScreen(previous.screen);
+              return remaining;
+            });
+          }}
+          onViewProfile={(userId) =>
+            openPublicProfile(userId, "publicProfile", selectedUserId)
+          }
         />
       );
 
@@ -174,7 +210,7 @@ function App() {
         <Feed
           onBack={() => setScreen("home")}
           onCreatePost={() => setScreen("createPost")}
-          onViewProfile={openPublicProfile}
+          onViewProfile={(userId) => openPublicProfile(userId, "feed")}
         />
       );
 
