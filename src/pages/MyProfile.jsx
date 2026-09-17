@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import ProfileService from "../services/profile/ProfileService";
 import FollowService from "../services/friends/FollowService";
-import TrustedSixPicker from "./TrustedSixPicker";
+import TrustedSixService from "../services/friends/TrustedSixService";
+import FriendService from "../services/friends/FriendService";
 import "../styles/login.css";
 
 function MyProfile({ onBack, onEditProfile, onViewProfile }) {
@@ -9,10 +10,7 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
   const [loading, setLoading] = useState(true);
   const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
-
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  const [trustedProfiles, setTrustedProfiles] = useState([]);
 
   async function loadProfile() {
     try {
@@ -24,11 +22,36 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
 
       setFollowers(followerCount);
       setFollowing(followingCount);
+
+      const trustedRows = await TrustedSixService.getTrustedSix(data.id);
+      const profiles = await FriendService.searchUsers("");
+      const selectedProfiles = trustedRows
+        .map((row) => profiles.find((user) => user.id === row.trusted_user_id))
+        .filter(Boolean);
+
+      setTrustedProfiles(selectedProfiles);
     } catch (error) {
       alert(error.message);
     } finally {
       setLoading(false);
     }
+  }
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  function getBubblePosition(index) {
+    const positions = [
+      { left: "50%", top: "-30px", transform: "translateX(-50%)" },
+      { left: "8%", top: "18px" },
+      { left: "92%", top: "18px", transform: "translateX(-100%)" },
+      { left: "8%", bottom: "18px" },
+      { left: "92%", bottom: "18px", transform: "translateX(-100%)" },
+      { left: "50%", bottom: "-30px", transform: "translateX(-50%)" },
+    ];
+
+    return positions[index] || positions[0];
   }
 
   if (loading) {
@@ -44,7 +67,6 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
       <div className="login-screen">
         <h1>Profile Not Found</h1>
         <p>Please complete your profile setup.</p>
-
         <button onClick={onBack}>← Back</button>
       </div>
     );
@@ -64,7 +86,7 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
           height: "220px",
           margin: "8px auto 28px",
           borderRadius: "18px",
-          overflow: "hidden",
+          overflow: "visible",
           backgroundImage: profile.header_background_url
             ? `url(${profile.header_background_url})`
             : "none",
@@ -80,13 +102,14 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
             style={{
               position: "absolute",
               inset: 0,
+              borderRadius: "18px",
               background: "rgba(0, 0, 0, 0.28)",
+              zIndex: 0,
             }}
           />
         )}
 
         <div
-          className="profile-photo-picker"
           style={{
             position: "absolute",
             left: "50%",
@@ -95,16 +118,62 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
             zIndex: 2,
           }}
         >
-          <div className="profile-photo-placeholder">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.display_name}
-                className="profile-photo"
-              />
-            ) : (
-              <span className="profile-photo-icon">👤</span>
-            )}
+          <div
+            className="profile-photo-picker"
+            style={{
+              position: "relative",
+              zIndex: 3,
+            }}
+          >
+            <div className="profile-photo-placeholder">
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.display_name}
+                  className="profile-photo"
+                />
+              ) : (
+                <span className="profile-photo-icon">👤</span>
+              )}
+            </div>
+
+            {trustedProfiles.map((trustedProfile, index) => (
+              <button
+                key={trustedProfile.id}
+                type="button"
+                onClick={() =>
+                  onViewProfile && onViewProfile(trustedProfile.id)
+                }
+                aria-label={`View ${trustedProfile.display_name}'s profile`}
+                style={{
+                  position: "absolute",
+                  width: "54px",
+                  height: "54px",
+                  padding: 0,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "3px solid white",
+                  background: "#161c2d",
+                  boxShadow: "0 4px 14px rgba(0, 0, 0, 0.4)",
+                  zIndex: 4,
+                  ...getBubblePosition(index),
+                }}
+              >
+                {trustedProfile.avatar_url ? (
+                  <img
+                    src={trustedProfile.avatar_url}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: "22px" }}>👤</span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -148,8 +217,6 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
         <h3>About Me</h3>
         <p>{profile.bio || "No bio has been added yet."}</p>
       </div>
-
-      <TrustedSixPicker onViewProfile={onViewProfile} />
 
       <button onClick={onEditProfile}>✏️ Edit Profile</button>
     </div>
