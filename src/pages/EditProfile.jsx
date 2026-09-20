@@ -3,6 +3,7 @@ import ProfileService from "../services/profile/ProfileService";
 import ProfilePhotoPicker from "../components/profile/ProfilePhotoPicker";
 import FriendService from "../services/friends/FriendService";
 import TrustedSixService from "../services/friends/TrustedSixService";
+import ProfileRing from "../components/profile/ProfileRing";
 import "../styles/login.css";
 
 function EditProfile({ onBack }) {
@@ -11,6 +12,9 @@ function EditProfile({ onBack }) {
   const [bio, setBio] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [headerBackgroundUrl, setHeaderBackgroundUrl] = useState("");
+  const [profileRingStyle, setProfileRingStyle] = useState("none");
+  const [profileRingPrimaryColor, setProfileRingPrimaryColor] = useState("#7c3aed");
+  const [profileRingSecondaryColor, setProfileRingSecondaryColor] = useState("#22d3ee");
   const [selectedAvatarFile, setSelectedAvatarFile] = useState(null);
   const [selectedBackgroundFile, setSelectedBackgroundFile] = useState(null);
   const [pendingBackgroundFile, setPendingBackgroundFile] = useState(null);
@@ -46,6 +50,9 @@ function EditProfile({ onBack }) {
       setBio(profile.bio || "");
       setAvatarUrl(profile.avatar_url || "");
       setHeaderBackgroundUrl(profile.header_background_url || "");
+      setProfileRingStyle(profile.profile_ring_style || "none");
+      setProfileRingPrimaryColor(profile.profile_ring_primary_color || "#7c3aed");
+      setProfileRingSecondaryColor(profile.profile_ring_secondary_color || "#22d3ee");
     } catch (error) {
       alert(error.message);
     }
@@ -189,6 +196,9 @@ function EditProfile({ onBack }) {
         bio,
         avatar_url: updatedAvatarUrl,
         header_background_url: updatedHeaderBackgroundUrl,
+        profile_ring_style: profileRingStyle,
+        profile_ring_primary_color: profileRingPrimaryColor,
+        profile_ring_secondary_color: profileRingSecondaryColor,
       });
 
       await saveTrustedSix();
@@ -222,6 +232,152 @@ function EditProfile({ onBack }) {
         currentImageUrl={avatarUrl}
         onImageSelected={handleImageSelected}
       />
+
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "480px",
+          marginTop: "24px",
+          padding: "16px",
+          borderRadius: "16px",
+          background: "rgba(255, 255, 255, 0.08)",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Profile Photo Ring</h2>
+        <p style={{ marginTop: 0 }}>
+          Customize the ring displayed around your profile photo and Trusted 6
+          bubbles.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: "16px",
+          }}
+        >
+          <ProfileRing
+            style={profileRingStyle}
+            primaryColor={profileRingPrimaryColor}
+            secondaryColor={profileRingSecondaryColor}
+            size={132}
+          >
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Profile preview"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "42px",
+                }}
+              >
+                👤
+              </div>
+            )}
+          </ProfileRing>
+        </div>
+
+        <label
+          htmlFor="profile-ring-style"
+          style={{ display: "block", marginBottom: "8px", fontWeight: 600 }}
+        >
+          Ring Style
+        </label>
+
+        <select
+          id="profile-ring-style"
+          value={profileRingStyle}
+          onChange={(event) => setProfileRingStyle(event.target.value)}
+          disabled={saving}
+          style={{
+            width: "100%",
+            marginBottom: "14px",
+            padding: "10px",
+            borderRadius: "10px",
+          }}
+        >
+          <option value="none">None</option>
+          <option value="classic">Classic</option>
+          <option value="basic">Basic Color</option>
+          <option value="gradient">Gradient</option>
+          <option value="neon">Neon</option>
+          <option value="radiant">Radiant</option>
+          <option value="dual">Dual Ring</option>
+        </select>
+
+        {profileRingStyle !== "none" && (
+          <div style={{ display: "grid", gap: "12px" }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+              }}
+            >
+              <span>Primary Color</span>
+              <input
+                type="color"
+                value={profileRingPrimaryColor}
+                onChange={(event) =>
+                  setProfileRingPrimaryColor(event.target.value)
+                }
+                disabled={saving}
+                style={{
+                  width: "56px",
+                  height: "40px",
+                  padding: "2px",
+                  border: 0,
+                }}
+              />
+            </label>
+
+            {profileRingStyle !== "classic" &&
+              profileRingStyle !== "basic" && (
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "12px",
+                  }}
+                >
+                  <span>Secondary Color</span>
+                  <input
+                    type="color"
+                    value={profileRingSecondaryColor}
+                    onChange={(event) =>
+                      setProfileRingSecondaryColor(event.target.value)
+                    }
+                    disabled={saving}
+                    style={{
+                      width: "56px",
+                      height: "40px",
+                      padding: "2px",
+                      border: 0,
+                    }}
+                  />
+                </label>
+              )}
+          </div>
+        )}
+      </div>
 
       <div
         style={{

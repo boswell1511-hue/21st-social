@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ProfileService from "../services/profile/ProfileService";
 import FollowService from "../services/friends/FollowService";
 import TrustedSixService from "../services/friends/TrustedSixService";
+import ProfileRing from "../components/profile/ProfileRing";
 import FriendService from "../services/friends/FriendService";
 import "../styles/login.css";
 
@@ -43,12 +44,12 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
 
   function getBubblePosition(index) {
     const positions = [
-      { left: "50%", top: "-30px", transform: "translateX(-50%)" },
-      { left: "8%", top: "18px" },
-      { left: "92%", top: "18px", transform: "translateX(-100%)" },
-      { left: "8%", bottom: "18px" },
-      { left: "92%", bottom: "18px", transform: "translateX(-100%)" },
-      { left: "50%", bottom: "-30px", transform: "translateX(-50%)" },
+      { left: "50%", top: "-58px", transform: "translateX(-50%)" },
+      { left: "-58px", top: "14px" },
+      { right: "-58px", top: "14px" },
+      { left: "-58px", bottom: "14px" },
+      { right: "-58px", bottom: "14px" },
+      { left: "50%", bottom: "-58px", transform: "translateX(-50%)" },
     ];
 
     return positions[index] || positions[0];
@@ -125,17 +126,47 @@ function MyProfile({ onBack, onEditProfile, onViewProfile }) {
               zIndex: 3,
             }}
           >
-            <div className="profile-photo-placeholder">
+            <ProfileRing
+              style={profile.profile_ring_style}
+              primaryColor={profile.profile_ring_primary_color || "#7c3aed"}
+              secondaryColor={profile.profile_ring_secondary_color || "#22d3ee"}
+              size={132}
+            >
+            <div
+              className="profile-photo-placeholder"
+              style={{
+                width: "122px",
+                height: "122px",
+                minWidth: "122px",
+                minHeight: "122px",
+                maxWidth: "122px",
+                maxHeight: "122px",
+                aspectRatio: "1 / 1",
+                borderRadius: "50%",
+                overflow: "hidden",
+                boxSizing: "border-box",
+                flexShrink: 0,
+              }}
+            >
               {profile.avatar_url ? (
                 <img
                   src={profile.avatar_url}
                   alt={profile.display_name}
                   className="profile-photo"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: "100%",
+                    aspectRatio: "1 / 1",
+                    objectFit: "cover",
+                    objectPosition: "center",
+                  }}
                 />
               ) : (
                 <span className="profile-photo-icon">👤</span>
               )}
             </div>
+            </ProfileRing>
 
             {trustedProfiles.map((trustedProfile, index) => (
               <button
