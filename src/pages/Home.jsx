@@ -8,6 +8,7 @@ function Home({
       onCreatePost,
         onCommunity,
           onDiscoverCommunities,
+  onMessages,
         }) {
           const [profile, setProfile] = useState(null);
 
@@ -116,7 +117,11 @@ function Home({
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             🌱 Discover Communities
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             </button>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <p className="coming-soon">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            <button className="secondary home-card" onClick={onMessages}>
+        💬 Messages
+      </button>
+
+      <p className="coming-soon">
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Share a thought, a photo, a story,
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             or something that inspires others.
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   </p>

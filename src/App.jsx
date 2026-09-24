@@ -12,6 +12,7 @@ import PublicProfile from "./pages/PublicProfile";
 import CreatePost from "./pages/CreatePost";
 import Feed from "./pages/Feed";
 import DiscoverCommunities from "./pages/DiscoverCommunities";
+import Messages from "./pages/messaging/Messages";
 import CommunityDetail from "./pages/CommunityDetail";
 import supabase from "./lib/supabase";
 import CreateCommunity from "./pages/CreateCommunity";
@@ -149,8 +150,12 @@ function App() {
           onCreatePost={() => setScreen("createPost")}
           onCommunity={() => setScreen("feed")}
           onDiscoverCommunities={() => setScreen("discoverCommunities")}
+          onMessages={() => setScreen("messages")}
         />
       );
+
+    case "messages":
+      return <Messages onBack={() => setScreen("home")} />;
 
     case "myProfile":
       return (
