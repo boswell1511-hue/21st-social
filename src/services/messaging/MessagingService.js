@@ -12,6 +12,9 @@ const MessagingService = {
         conversations (
           id,
           created_by,
+          conversation_type,
+          name,
+          is_locked,
           created_at,
           updated_at
         )
@@ -25,21 +28,23 @@ const MessagingService = {
       .map((row) => row.conversations)
       .filter(Boolean);
 
-    if (conversations.length === 0) {
-      return [];
-    }
+    if (conversations.length === 0) return [];
 
     const conversationIds = conversations.map((conversation) => conversation.id);
 
     const { data: memberRows, error: membersError } = await supabase
       .from("conversation_members")
-      .select("conversation_id, user_id")
+      .select("conversation_id, user_id, joined_at")
       .in("conversation_id", conversationIds);
 
     if (membersError) throw membersError;
 
     const memberUserIds = [
-      ...new Set((memberRows || []).map((member) => member.user_id).filter(Boolean)),
+      ...new Set(
+        (memberRows || [])
+          .map((member) => member.user_id)
+          .filter(Boolean)
+      ),
     ];
 
     let profiles = [];
@@ -76,57 +81,121 @@ const MessagingService = {
     return conversations.map((conversation) => {
       const participantProfiles =
         membersByConversationId.get(conversation.id) || [];
+
       const otherParticipants = participantProfiles.filter(
         (profile) => profile.id !== userId
       );
-      const participant = otherParticipants[0] || participantProfiles[0] || null;
+
+      const participant =
+        otherParticipants[0] || participantProfiles[0] || null;
+
+      const isGroup = conversation.conversation_type === "group";
 
       return {
         ...conversation,
         participantProfiles,
         participant,
-        displayName:
-          participant?.display_name ||
-          participant?.username ||
-          (otherParticipants.length > 1
-            ? `${otherParticipants.length} participants`
-            : "Conversation"),
+        displayName: isGroup
+          ? conversation.name || "Group Conversation"
+          : participant?.display_name ||
+            participant?.username ||
+            (otherParticipants.length > 1
+              ? `${otherParticipants.length} participants`
+              : "Conversation"),
       };
     });
   },
 
   async getConversationMembers(conversationId) {
-    if (!conversationId) throw new Error("A conversation ID is required.");
+    if (!conversationId) {
+      throw new Error("A conversation ID is required.");
+    }
 
-    const { data, error } = await supabase
+    const { data: memberRows, error: membersError } = await supabase
       .from("conversation_members")
       .select("id, conversation_id, user_id, joined_at")
       .eq("conversation_id", conversationId)
       .order("joined_at", { ascending: true });
 
-    if (error) throw error;
-    return data || [];
+    if (membersError) throw membersError;
+
+    const memberUserIds = [
+      ...new Set(
+        (memberRows || [])
+          .map((member) => member.user_id)
+          .filter(Boolean)
+      ),
+    ];
+
+    let profiles = [];
+
+    if (memberUserIds.length > 0) {
+      const { data: profileRows, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", memberUserIds);
+
+      if (profilesError) throw profilesError;
+      profiles = profileRows || [];
+    }
+
+    const profilesById = new Map(
+      profiles.map((profile) => [profile.id, profile])
+    );
+
+    return (memberRows || []).map((member) => ({
+      ...member,
+      profile: profilesById.get(member.user_id) || null,
+    }));
   },
 
   async getMessages(conversationId) {
-    if (!conversationId) throw new Error("A conversation ID is required.");
+    if (!conversationId) {
+      throw new Error("A conversation ID is required.");
+    }
 
-    const { data, error } = await supabase
+    const { data: messageRows, error } = await supabase
       .from("messages")
       .select("id, conversation_id, sender_id, body, created_at, read_at")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return data || [];
+
+    const senderIds = [
+      ...new Set(
+        (messageRows || [])
+          .map((message) => message.sender_id)
+          .filter(Boolean)
+      ),
+    ];
+
+    let profiles = [];
+
+    if (senderIds.length > 0) {
+      const { data: profileRows, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", senderIds);
+
+      if (profilesError) throw profilesError;
+      profiles = profileRows || [];
+    }
+
+    const profilesById = new Map(
+      profiles.map((profile) => [profile.id, profile])
+    );
+
+    return (messageRows || []).map((message) => ({
+      ...message,
+      senderProfile: profilesById.get(message.sender_id) || null,
+    }));
   },
 
   async searchProfilesForMessaging(searchText) {
     const trimmedSearch = searchText?.trim();
 
-    if (!trimmedSearch || trimmedSearch.length < 2) {
-      return [];
-    }
+    if (!trimmedSearch || trimmedSearch.length < 2) return [];
 
     const { data, error } = await supabase.rpc(
       "search_profiles_for_messaging",
@@ -151,13 +220,13 @@ const MessagingService = {
 
     const conversationId = matches?.[0]?.conversation_id;
 
-    if (!conversationId) {
-      return null;
-    }
+    if (!conversationId) return null;
 
     const { data: conversation, error: conversationError } = await supabase
       .from("conversations")
-      .select("id, created_by, created_at, updated_at")
+      .select(
+        "id, created_by, conversation_type, name, is_locked, created_at, updated_at"
+      )
       .eq("id", conversationId)
       .single();
 
@@ -166,9 +235,22 @@ const MessagingService = {
     return conversation;
   },
 
-  async createConversation(createdBy, memberUserIds = []) {
+  async createConversation(
+    createdBy,
+    memberUserIds = [],
+    options = {}
+  ) {
     if (!createdBy) {
       throw new Error("The conversation creator is required.");
+    }
+
+    const conversationType =
+      options.conversationType === "group" ? "group" : "direct";
+
+    const groupName = options.name?.trim() || "";
+
+    if (conversationType === "group" && !groupName) {
+      throw new Error("A group name is required.");
     }
 
     const uniqueMemberIds = [
@@ -179,9 +261,13 @@ const MessagingService = {
       (userId) => userId !== createdBy
     );
 
-    // A conversation with exactly one other member is a direct conversation.
-    // Reuse the existing conversation instead of creating a duplicate.
-    if (otherMemberIds.length === 1) {
+    if (conversationType === "direct") {
+      if (otherMemberIds.length !== 1) {
+        throw new Error(
+          "A direct conversation requires exactly one other member."
+        );
+      }
+
       const existingConversation = await this.findDirectConversation(
         otherMemberIds[0]
       );
@@ -191,10 +277,21 @@ const MessagingService = {
       }
     }
 
+    if (conversationType === "group" && otherMemberIds.length < 2) {
+      throw new Error("A group conversation requires at least two other members.");
+    }
+
     const { data: conversation, error: conversationError } = await supabase
       .from("conversations")
-      .insert({ created_by: createdBy })
-      .select("id, created_by, created_at, updated_at")
+      .insert({
+        created_by: createdBy,
+        conversation_type: conversationType,
+        name: conversationType === "group" ? groupName : null,
+        is_locked: false,
+      })
+      .select(
+        "id, created_by, conversation_type, name, is_locked, created_at, updated_at"
+      )
       .single();
 
     if (conversationError) throw conversationError;
@@ -216,7 +313,10 @@ const MessagingService = {
   async sendMessage(conversationId, senderId, body) {
     const trimmedBody = body?.trim();
 
-    if (!conversationId) throw new Error("A conversation ID is required.");
+    if (!conversationId) {
+      throw new Error("A conversation ID is required.");
+    }
+
     if (!senderId) throw new Error("A sender ID is required.");
     if (!trimmedBody) throw new Error("Message text cannot be empty.");
 
@@ -231,7 +331,19 @@ const MessagingService = {
       .single();
 
     if (error) throw error;
-    return data;
+
+    const { data: senderProfile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .eq("id", senderId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    return {
+      ...data,
+      senderProfile,
+    };
   },
 
   async markMessageRead(messageId) {

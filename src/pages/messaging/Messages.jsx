@@ -7,6 +7,7 @@ function Messages({ onBack }) {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [conversationMembers, setConversationMembers] = useState([]);
   const [messageBody, setMessageBody] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -14,10 +15,12 @@ function Messages({ onBack }) {
   const [error, setError] = useState("");
 
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [conversationMode, setConversationMode] = useState("direct");
+  const [groupName, setGroupName] = useState("");
   const [profileSearch, setProfileSearch] = useState("");
   const [profileResults, setProfileResults] = useState([]);
   const [searchingProfiles, setSearchingProfiles] = useState(false);
-  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [selectedProfiles, setSelectedProfiles] = useState([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
 
   useEffect(() => {
@@ -42,9 +45,11 @@ function Messages({ onBack }) {
       }
 
       setUser(currentUser);
+
       const conversationData = await MessagingService.listConversations(
         currentUser.id
       );
+
       setConversations(conversationData);
     } catch (loadError) {
       console.error("Unable to load messages:", loadError);
@@ -54,10 +59,29 @@ function Messages({ onBack }) {
     }
   }
 
+  function resetNewConversation() {
+    setProfileSearch("");
+    setProfileResults([]);
+    setSelectedProfiles([]);
+    setGroupName("");
+    setConversationMode("direct");
+  }
+
+  function closeNewConversation() {
+    setShowNewConversation(false);
+    resetNewConversation();
+  }
+
+  function changeConversationMode(mode) {
+    setConversationMode(mode);
+    setSelectedProfiles([]);
+    setProfileSearch("");
+    setProfileResults([]);
+  }
+
   async function searchProfiles(event) {
     const value = event.target.value;
     setProfileSearch(value);
-    setSelectedProfile(null);
 
     if (value.trim().length < 2) {
       setProfileResults([]);
@@ -78,8 +102,50 @@ function Messages({ onBack }) {
     }
   }
 
+  function toggleProfileSelection(profile) {
+    if (conversationMode === "direct") {
+      setSelectedProfiles([profile]);
+      return;
+    }
+
+    setSelectedProfiles((currentProfiles) => {
+      const alreadySelected = currentProfiles.some(
+        (selected) => selected.id === profile.id
+      );
+
+      if (alreadySelected) {
+        return currentProfiles.filter((selected) => selected.id !== profile.id);
+      }
+
+      return [...currentProfiles, profile];
+    });
+  }
+
+  function removeSelectedProfile(profileId) {
+    setSelectedProfiles((currentProfiles) =>
+      currentProfiles.filter((profile) => profile.id !== profileId)
+    );
+  }
+
   async function handleCreateConversation() {
-    if (!user || !selectedProfile || creatingConversation) return;
+    if (!user || creatingConversation) return;
+
+    if (conversationMode === "direct" && selectedProfiles.length !== 1) {
+      setError("Select one person for a direct message.");
+      return;
+    }
+
+    if (conversationMode === "group") {
+      if (!groupName.trim()) {
+        setError("Enter a name for the group.");
+        return;
+      }
+
+      if (selectedProfiles.length < 2) {
+        setError("Select at least two other members for a group.");
+        return;
+      }
+    }
 
     setCreatingConversation(true);
     setError("");
@@ -87,16 +153,23 @@ function Messages({ onBack }) {
     try {
       const newConversation = await MessagingService.createConversation(
         user.id,
-        [selectedProfile.id]
+        selectedProfiles.map((profile) => profile.id),
+        {
+          conversationType: conversationMode,
+          name: groupName,
+        }
       );
 
       const namedConversation = {
         ...newConversation,
-        participant: selectedProfile,
+        participantProfiles: [user, ...selectedProfiles],
+        participant: selectedProfiles[0] || user,
         displayName:
-          selectedProfile.display_name ||
-          selectedProfile.username ||
-          "Conversation",
+          conversationMode === "group"
+            ? newConversation.name || groupName.trim()
+            : selectedProfiles[0]?.display_name ||
+              selectedProfiles[0]?.username ||
+              "Conversation",
       };
 
       setConversations((currentConversations) => [
@@ -106,11 +179,7 @@ function Messages({ onBack }) {
         ),
       ]);
 
-      setShowNewConversation(false);
-      setProfileSearch("");
-      setProfileResults([]);
-      setSelectedProfile(null);
-
+      closeNewConversation();
       await openConversation(namedConversation);
     } catch (createError) {
       console.error("Unable to create conversation:", createError);
@@ -124,14 +193,19 @@ function Messages({ onBack }) {
 
   async function openConversation(conversation) {
     setSelectedConversation(conversation);
+    setMessages([]);
+    setConversationMembers([]);
     setLoadingMessages(true);
     setError("");
 
     try {
-      const conversationMessages = await MessagingService.getMessages(
-        conversation.id
-      );
+      const [conversationMessages, members] = await Promise.all([
+        MessagingService.getMessages(conversation.id),
+        MessagingService.getConversationMembers(conversation.id),
+      ]);
+
       setMessages(conversationMessages);
+      setConversationMembers(members);
     } catch (loadError) {
       console.error("Unable to load conversation:", loadError);
       setError(loadError.message || "Unable to load conversation.");
@@ -169,6 +243,21 @@ function Messages({ onBack }) {
     }
   }
 
+  function getProfileName(profile, fallback = "Unknown user") {
+    return (
+      profile?.display_name ||
+      profile?.username ||
+      fallback
+    );
+  }
+
+  function getProfileUsername(profile) {
+    return profile?.username ? `@${profile.username}` : "";
+  }
+
+  const isSelectedGroup =
+    selectedConversation?.conversation_type === "group";
+
   return (
     <main
       style={{
@@ -204,7 +293,13 @@ function Messages({ onBack }) {
 
         <button
           type="button"
-          onClick={() => setShowNewConversation((current) => !current)}
+          onClick={() => {
+            if (showNewConversation) {
+              closeNewConversation();
+            } else {
+              setShowNewConversation(true);
+            }
+          }}
           style={{
             marginLeft: "auto",
             background: "#7652d9",
@@ -240,7 +335,63 @@ function Messages({ onBack }) {
             marginBottom: "20px",
           }}
         >
-          <h2>Start a new conversation</h2>
+          <h2 style={{ marginTop: 0 }}>Start a new conversation</h2>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              marginBottom: "12px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => changeConversationMode("direct")}
+              style={{
+                background:
+                  conversationMode === "direct" ? "#29204a" : "#171722",
+                color: "#ffffff",
+                border: "1px solid #343447",
+                borderRadius: "8px",
+                padding: "9px 12px",
+              }}
+            >
+              Direct Message
+            </button>
+
+            <button
+              type="button"
+              onClick={() => changeConversationMode("group")}
+              style={{
+                background:
+                  conversationMode === "group" ? "#29204a" : "#171722",
+                color: "#ffffff",
+                border: "1px solid #343447",
+                borderRadius: "8px",
+                padding: "9px 12px",
+              }}
+            >
+              Group Message
+            </button>
+          </div>
+
+          {conversationMode === "group" && (
+            <input
+              value={groupName}
+              onChange={(event) => setGroupName(event.target.value)}
+              placeholder="Group name..."
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                background: "#11111b",
+                color: "#ffffff",
+                border: "1px solid #444",
+                borderRadius: "8px",
+                padding: "12px",
+                marginBottom: "10px",
+              }}
+            />
+          )}
 
           <input
             value={profileSearch}
@@ -257,49 +408,91 @@ function Messages({ onBack }) {
             }}
           />
 
+          {selectedProfiles.length > 0 && (
+            <div style={{ marginTop: "12px" }}>
+              <div style={{ color: "#aaa", marginBottom: "8px" }}>
+                Selected members: {selectedProfiles.length}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                }}
+              >
+                {selectedProfiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => removeSelectedProfile(profile.id)}
+                    style={{
+                      background: "#29204a",
+                      color: "#ffffff",
+                      border: "1px solid #7652d9",
+                      borderRadius: "16px",
+                      padding: "6px 10px",
+                    }}
+                  >
+                    {getProfileName(profile)} ×
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {searchingProfiles && <p>Searching...</p>}
 
-          {!searchingProfiles && profileSearch.trim().length >= 2 &&
+          {!searchingProfiles &&
+            profileSearch.trim().length >= 2 &&
             profileResults.length === 0 && (
               <p style={{ color: "#aaa" }}>No matching users found.</p>
             )}
 
           <div style={{ marginTop: "12px" }}>
-            {profileResults.map((profile) => (
-              <button
-                key={profile.id}
-                type="button"
-                onClick={() => setSelectedProfile(profile)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background:
-                    selectedProfile?.id === profile.id
-                      ? "#29204a"
-                      : "#171722",
-                  color: "#ffffff",
-                  border: "1px solid #343447",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  marginBottom: "8px",
-                }}
-              >
-                <strong>
-                  {profile.username || profile.display_name || "User"}
-                </strong>
-                {profile.username && profile.display_name && (
-                  <div style={{ color: "#aaa", marginTop: "4px" }}>
-                    {profile.display_name}
-                  </div>
-                )}
-              </button>
-            ))}
+            {profileResults.map((profile) => {
+              const isSelected = selectedProfiles.some(
+                (selected) => selected.id === profile.id
+              );
+
+              return (
+                <button
+                  key={profile.id}
+                  type="button"
+                  onClick={() => toggleProfileSelection(profile)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    background: isSelected ? "#29204a" : "#171722",
+                    color: "#ffffff",
+                    border: "1px solid #343447",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <strong>
+                    {profile.username || profile.display_name || "User"}
+                  </strong>
+                  {profile.username && profile.display_name && (
+                    <div style={{ color: "#aaa", marginTop: "4px" }}>
+                      {profile.display_name}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <button
             type="button"
-            disabled={!selectedProfile || creatingConversation}
+            disabled={
+              creatingConversation ||
+              (conversationMode === "direct"
+                ? selectedProfiles.length !== 1
+                : !groupName.trim() || selectedProfiles.length < 2)
+            }
             onClick={handleCreateConversation}
             style={{
               background: "#7652d9",
@@ -307,10 +500,20 @@ function Messages({ onBack }) {
               border: "none",
               borderRadius: "8px",
               padding: "10px 16px",
-              opacity: !selectedProfile || creatingConversation ? 0.5 : 1,
+              opacity:
+                creatingConversation ||
+                (conversationMode === "direct"
+                  ? selectedProfiles.length !== 1
+                  : !groupName.trim() || selectedProfiles.length < 2)
+                  ? 0.5
+                  : 1,
             }}
           >
-            {creatingConversation ? "Creating..." : "Start Conversation"}
+            {creatingConversation
+              ? "Creating..."
+              : conversationMode === "group"
+                ? "Create Group"
+                : "Start Conversation"}
           </button>
         </section>
       )}
@@ -341,44 +544,64 @@ function Messages({ onBack }) {
           <div>
             <h2>Conversations</h2>
 
-            {conversations.map((conversation) => (
-              <button
-                key={conversation.id}
-                type="button"
-                onClick={() => openConversation(conversation)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background:
-                    selectedConversation?.id === conversation.id
-                      ? "#29204a"
-                      : "#171722",
-                  color: "#ffffff",
-                  border: "1px solid #343447",
-                  borderRadius: "10px",
-                  padding: "14px",
-                  marginBottom: "8px",
-                }}
-              >
-                <strong>
-                  {conversation.participant?.username ||
-                    conversation.displayName ||
-                    "Conversation"}
-                </strong>
-                {conversation.participant?.display_name && (
-                  <div
-                    style={{
-                      color: "#aaa",
-                      fontSize: "12px",
-                      marginTop: "4px",
-                    }}
-                  >
-                    {conversation.participant.display_name}
-                  </div>
-                )}
-              </button>
-            ))}
+            {conversations.map((conversation) => {
+              const isGroup =
+                conversation.conversation_type === "group";
+
+              return (
+                <button
+                  key={conversation.id}
+                  type="button"
+                  onClick={() => openConversation(conversation)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    background:
+                      selectedConversation?.id === conversation.id
+                        ? "#29204a"
+                        : "#171722",
+                    color: "#ffffff",
+                    border: "1px solid #343447",
+                    borderRadius: "10px",
+                    padding: "14px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <strong>
+                    {isGroup
+                      ? conversation.name || "Group Conversation"
+                      : conversation.participant?.username ||
+                        conversation.displayName ||
+                        "Conversation"}
+                  </strong>
+
+                  {isGroup ? (
+                    <div
+                      style={{
+                        color: "#aaa",
+                        fontSize: "12px",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {conversation.participantProfiles?.length || 0} members
+                    </div>
+                  ) : (
+                    conversation.participant?.display_name && (
+                      <div
+                        style={{
+                          color: "#aaa",
+                          fontSize: "12px",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {conversation.participant.display_name}
+                      </div>
+                    )
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {selectedConversation && (
@@ -390,14 +613,86 @@ function Messages({ onBack }) {
               }}
             >
               <h2 style={{ marginBottom: "4px" }}>
-                {selectedConversation.participant?.username ||
-                  selectedConversation.displayName ||
-                  "Conversation"}
+                {isSelectedGroup
+                  ? selectedConversation.name || "Group Conversation"
+                  : selectedConversation.participant?.username ||
+                    selectedConversation.displayName ||
+                    "Conversation"}
               </h2>
-              {selectedConversation.participant?.display_name && (
-                <div style={{ color: "#aaa", marginBottom: "16px" }}>
-                  {selectedConversation.participant.display_name}
-                </div>
+
+              {isSelectedGroup ? (
+                <section
+                  style={{
+                    border: "1px solid #292938",
+                    borderRadius: "10px",
+                    padding: "12px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <h3 style={{ marginTop: 0, marginBottom: "10px" }}>
+                    Group members ({conversationMembers.length})
+                  </h3>
+
+                  {conversationMembers.map((member) => {
+                    const profile = member.profile;
+                    const isCurrentUser = member.user_id === user?.id;
+
+                    return (
+                      <div
+                        key={member.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "8px 0",
+                          borderBottom: "1px solid #20202c",
+                        }}
+                      >
+                        {profile?.avatar_url ? (
+                          <img
+                            src={profile.avatar_url}
+                            alt=""
+                            width="32"
+                            height="32"
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              background: "#29204a",
+                            }}
+                          />
+                        )}
+
+                        <div>
+                          <strong>
+                            {getProfileName(profile)}
+                            {isCurrentUser ? " (You)" : ""}
+                          </strong>
+                          {getProfileUsername(profile) && (
+                            <div style={{ color: "#aaa", fontSize: "12px" }}>
+                              {getProfileUsername(profile)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </section>
+              ) : (
+                selectedConversation.participant?.display_name && (
+                  <div style={{ color: "#aaa", marginBottom: "16px" }}>
+                    {selectedConversation.participant.display_name}
+                  </div>
+                )
               )}
 
               {loadingMessages ? (
@@ -408,25 +703,50 @@ function Messages({ onBack }) {
                 </p>
               ) : (
                 <div style={{ marginBottom: "20px" }}>
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      style={{
-                        background:
-                          message.sender_id === user?.id
-                            ? "#29204a"
-                            : "#20202c",
-                        borderRadius: "10px",
-                        padding: "10px 12px",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <p style={{ margin: 0 }}>{message.body}</p>
-                      <small style={{ color: "#aaa" }}>
-                        {new Date(message.created_at).toLocaleString()}
-                      </small>
-                    </div>
-                  ))}
+                  {messages.map((message) => {
+                    const senderProfile =
+                      message.senderProfile ||
+                      conversationMembers.find(
+                        (member) => member.user_id === message.sender_id
+                      )?.profile ||
+                      null;
+
+                    const senderName = getProfileName(
+                      senderProfile,
+                      message.sender_id === user?.id ? "You" : "Unknown user"
+                    );
+
+                    return (
+                      <div
+                        key={message.id}
+                        style={{
+                          background:
+                            message.sender_id === user?.id
+                              ? "#29204a"
+                              : "#20202c",
+                          borderRadius: "10px",
+                          padding: "10px 12px",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: "700",
+                            color: "#bda7ff",
+                            marginBottom: "4px",
+                          }}
+                        >
+                          {senderName}
+                        </div>
+
+                        <p style={{ margin: 0 }}>{message.body}</p>
+
+                        <small style={{ color: "#aaa" }}>
+                          {new Date(message.created_at).toLocaleString()}
+                        </small>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
