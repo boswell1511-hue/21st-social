@@ -310,6 +310,30 @@ const MessagingService = {
     return conversation;
   },
 
+  async updateGroupConversationName(conversationId, name) {
+    if (!conversationId) {
+      throw new Error("A conversation ID is required.");
+    }
+
+    const trimmedName = name?.trim();
+
+    if (!trimmedName) {
+      throw new Error("Group name cannot be empty.");
+    }
+
+    const { data, error } = await supabase.rpc(
+      "update_group_conversation_name",
+      {
+        p_conversation_id: conversationId,
+        p_name: trimmedName,
+      }
+    );
+
+    if (error) throw error;
+
+    return Array.isArray(data) ? data[0] : data;
+  },
+
   async sendMessage(conversationId, senderId, body) {
     const trimmedBody = body?.trim();
 

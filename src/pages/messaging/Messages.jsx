@@ -23,6 +23,10 @@ function Messages({ onBack }) {
   const [selectedProfiles, setSelectedProfiles] = useState([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
 
+  const [editingGroupName, setEditingGroupName] = useState(false);
+  const [groupNameDraft, setGroupNameDraft] = useState("");
+  const [savingGroupName, setSavingGroupName] = useState(false);
+
   useEffect(() => {
     loadMessagingData();
   }, []);
@@ -125,6 +129,71 @@ function Messages({ onBack }) {
     setSelectedProfiles((currentProfiles) =>
       currentProfiles.filter((profile) => profile.id !== profileId)
     );
+  }
+
+  function startEditingGroupName() {
+    if (!selectedConversation) return;
+
+    setGroupNameDraft(selectedConversation.name || "");
+    setEditingGroupName(true);
+    setError("");
+  }
+
+  function cancelEditingGroupName() {
+    setEditingGroupName(false);
+    setGroupNameDraft("");
+  }
+
+  async function handleSaveGroupName() {
+    if (!selectedConversation || savingGroupName) return;
+
+    const trimmedName = groupNameDraft.trim();
+
+    if (!trimmedName) {
+      setError("Group name cannot be empty.");
+      return;
+    }
+
+    setSavingGroupName(true);
+    setError("");
+
+    try {
+      const updatedConversation =
+        await MessagingService.updateGroupConversationName(
+          selectedConversation.id,
+          trimmedName
+        );
+
+      const updatedConversationData = {
+        ...selectedConversation,
+        ...updatedConversation,
+        name: updatedConversation?.name || trimmedName,
+        displayName: updatedConversation?.name || trimmedName,
+      };
+
+      setSelectedConversation(updatedConversationData);
+
+      setConversations((currentConversations) =>
+        currentConversations.map((conversation) =>
+          conversation.id === updatedConversationData.id
+            ? {
+                ...conversation,
+                ...updatedConversationData,
+                name: updatedConversationData.name,
+                displayName: updatedConversationData.name,
+              }
+            : conversation
+        )
+      );
+
+      setEditingGroupName(false);
+      setGroupNameDraft("");
+    } catch (saveError) {
+      console.error("Unable to update group name:", saveError);
+      setError(saveError.message || "Unable to update group name.");
+    } finally {
+      setSavingGroupName(false);
+    }
   }
 
   async function handleCreateConversation() {
@@ -629,9 +698,99 @@ function Messages({ onBack }) {
                     marginBottom: "16px",
                   }}
                 >
-                  <h3 style={{ marginTop: 0, marginBottom: "10px" }}>
-                    Group members ({conversationMembers.length})
-                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "10px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <h3 style={{ margin: 0 }}>
+                      Group members ({conversationMembers.length})
+                    </h3>
+
+                    {!editingGroupName && (
+                      <button
+                        type="button"
+                        onClick={startEditingGroupName}
+                        style={{
+                          background: "#7652d9",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "7px",
+                          padding: "7px 10px",
+                          fontSize: "12px",
+                        }}
+                      >
+                        Edit Group Name
+                      </button>
+                    )}
+                  </div>
+
+                  {editingGroupName && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      <input
+                        value={groupNameDraft}
+                        onChange={(event) =>
+                          setGroupNameDraft(event.target.value)
+                        }
+                        maxLength={100}
+                        autoFocus
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          boxSizing: "border-box",
+                          background: "#11111b",
+                          color: "#ffffff",
+                          border: "1px solid #444",
+                          borderRadius: "8px",
+                          padding: "10px",
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleSaveGroupName}
+                        disabled={savingGroupName || !groupNameDraft.trim()}
+                        style={{
+                          background: "#7652d9",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "7px",
+                          padding: "8px 11px",
+                          opacity:
+                            savingGroupName || !groupNameDraft.trim()
+                              ? 0.5
+                              : 1,
+                        }}
+                      >
+                        {savingGroupName ? "Saving..." : "Save"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={cancelEditingGroupName}
+                        disabled={savingGroupName}
+                        style={{
+                          background: "#20202c",
+                          color: "#ffffff",
+                          border: "1px solid #444",
+                          borderRadius: "7px",
+                          padding: "8px 11px",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
 
                   {conversationMembers.map((member) => {
                     const profile = member.profile;
